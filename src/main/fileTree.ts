@@ -14,7 +14,8 @@ function compareNodes(a: FileTreeNode, b: FileTreeNode): number {
   return collator.compare(a.name, b.name)
 }
 
-function isIgnoredDirectory(name: string): boolean {
+/** Dot-folders such as `.git`, and `node_modules`, are never listed or watched. */
+export function isIgnoredDirectory(name: string): boolean {
   return name.startsWith('.') || IGNORED_DIRECTORIES.has(name)
 }
 

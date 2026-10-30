@@ -1,5 +1,6 @@
 import { realpath, stat } from 'node:fs/promises'
 import path from 'node:path'
+import { imageMimeType, localImageReference } from './images'
 import { PathAccessError, isMarkdownPath, resolveInsideRoot } from './pathGuard'
 
 /**
@@ -30,6 +31,31 @@ export class AccessScope {
     const real = await realpath(filePath)
     if (!(await stat(real)).isFile()) throw new PathAccessError('Not a file', filePath)
     this.#files.add(real)
+    return real
+  }
+
+  /**
+   * Keeps access to a file after the folder changes, such as the document that
+   * is open while the user opens another folder. Only pass a real path that
+   * this scope already resolved.
+   */
+  keepFile(realPath: string): void {
+    this.#files.add(realPath)
+  }
+
+  /**
+   * Resolves an image that `documentPath` links as `src`. The image must lie
+   * inside the open folder and have an image extension; anything else throws
+   * `PathAccessError`.
+   */
+  async resolveImage(documentPath: unknown, src: unknown): Promise<string> {
+    const folder = this.#folder
+    if (!folder) throw new PathAccessError('Images load only from an open folder', String(src))
+    const document = await this.resolveForRead(documentPath)
+    const { fromRoot, relativePath } = localImageReference(src)
+    const candidate = fromRoot ? path.join(folder, relativePath) : path.resolve(path.dirname(document), relativePath)
+    const real = await resolveInsideRoot(folder, candidate)
+    if (!imageMimeType(real)) throw new PathAccessError('Not an image', String(src))
     return real
   }
 
