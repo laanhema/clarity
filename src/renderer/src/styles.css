@@ -1,0 +1,238 @@
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --bg-sidebar: #f5f6f8;
+  --bg-status: #eceef1;
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --bg-active: rgba(46, 107, 230, 0.12);
+  --fg: #1f2328;
+  --fg-muted: #656d76;
+  --border: #d8dce1;
+  --accent: #2e6be6;
+  --unsaved: #d4740b;
+  --danger: #c4314b;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1f22;
+    --bg-sidebar: #191a1c;
+    --bg-status: #161718;
+    --bg-hover: rgba(255, 255, 255, 0.06);
+    --bg-active: rgba(110, 158, 255, 0.18);
+    --fg: #e3e5e8;
+    --fg-muted: #9aa0a6;
+    --border: #303236;
+    --accent: #6e9eff;
+    --unsaved: #f0a64a;
+    --danger: #ff7b8a;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.4 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'sidebar editor preview'
+    'status status status';
+  height: 100%;
+}
+
+/* Sidebar */
+
+.sidebar {
+  grid-area: sidebar;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.sidebar-open {
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.sidebar-open:hover {
+  border-color: var(--accent);
+}
+
+.sidebar-empty {
+  margin: 12px 10px;
+  color: var(--fg-muted);
+}
+
+.sidebar > .tree {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 0 12px;
+}
+
+.tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree .tree {
+  padding-left: 12px;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 3px 10px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tree-row:hover {
+  background: var(--bg-hover);
+}
+
+.tree-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.tree-chevron {
+  width: 12px;
+  color: var(--fg-muted);
+}
+
+.tree-file {
+  padding-left: 26px;
+}
+
+.tree-file[aria-current='page'] {
+  background: var(--bg-active);
+}
+
+.tree-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.unsaved-dot {
+  color: var(--unsaved);
+  font-size: 10px;
+}
+
+/* Panes */
+
+.pane {
+  min-width: 0;
+  min-height: 0;
+}
+
+.editor-pane {
+  grid-area: editor;
+  display: flex;
+  border-right: 1px solid var(--border);
+}
+
+.editor {
+  flex: 1;
+  padding: 16px 20px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.6 var(--font-mono);
+  tab-size: 4;
+}
+
+.preview-pane {
+  grid-area: preview;
+  overflow: auto;
+  padding: 16px 24px;
+}
+
+.preview-placeholder {
+  color: var(--fg-muted);
+}
+
+/* Status bar */
+
+.status-bar {
+  grid-area: status;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 3px 10px;
+  background: var(--bg-status);
+  border-top: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-message {
+  color: var(--danger);
+}
