@@ -32,5 +32,7 @@ export default defineConfig({
   renderer: {
     root: resolve(__dirname, 'src/renderer'),
     plugins: [react(), cspPlugin()],
+    // electron-vite leaves the renderer unminified by default.
+    build: { minify: true },
   },
 })

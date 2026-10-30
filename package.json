@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "A simple desktop Markdown reader and editor",
+  "homepage": "https://mdpad.invalid/",
   "main": "./out/main/index.js",
+  "desktopName": "mdpad.desktop",
   "author": "Lauri Makkonen",
   "license": "MIT",
   "scripts": {
@@ -13,7 +15,8 @@
     "typecheck": "tsc --build --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "dist": "npm run build && electron-builder --linux AppImage deb"
   },
   "dependencies": {
     "chokidar": "^4.0.3"
@@ -40,6 +43,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "electron": "^45.2.0",
+    "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
     "eslint": "^10.14.0",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -61,5 +65,40 @@
     "unified": "^11.0.5",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
+  },
+  "build": {
+    "appId": "app.mdpad.desktop",
+    "productName": "mdpad",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office",
+      "icon": "build/icon.png",
+      "executableName": "mdpad",
+      "maintainer": "Lauri Makkonen",
+      "synopsis": "A simple Markdown reader and editor",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "syncDesktopName": true
+    },
+    "deb": {
+      "packageCategory": "editors"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    }
   }
 }
