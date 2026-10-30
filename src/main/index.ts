@@ -1,18 +1,19 @@
 import { app, BrowserWindow, Menu, nativeTheme, screen } from 'electron'
 import { join } from 'node:path'
-import { IpcChannel, type UiSettings } from '../shared/api'
+import { INITIAL_THEME_SWITCH, IpcChannel, type UiSettings } from '../shared/api'
 import { openRecentFolder, registerIpcHandlers } from './ipc'
 import { buildMenu } from './menu'
 import { denyAllPermissions, hardenWebContents } from './security'
 import { pruneRecentFolders, SettingsStore, type Settings } from './settings'
+import { nativeThemeSource, windowBackground } from './theme'
 import { restoreBounds } from './windowBounds'
 import { stateFor, trackWindow } from './windowState'
 
 const devServerUrl = app.isPackaged ? undefined : process.env['ELECTRON_RENDERER_URL']
 let quitting = false
 
-function backgroundColor(): string {
-  return nativeTheme.shouldUseDarkColors ? '#1e1f22' : '#ffffff'
+function backgroundColor(ui: UiSettings): string {
+  return windowBackground(ui.theme, nativeTheme.shouldUseDarkColors)
 }
 
 function createWindow(settings: SettingsStore): BrowserWindow {
@@ -26,9 +27,10 @@ function createWindow(settings: SettingsStore): BrowserWindow {
     minHeight: 400,
     show: false,
     title: 'mdpad',
-    backgroundColor: backgroundColor(),
+    backgroundColor: backgroundColor(settings.current.ui),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
+      additionalArguments: [`${INITIAL_THEME_SWITCH}${settings.current.ui.theme}`],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -74,7 +76,7 @@ function createWindow(settings: SettingsStore): BrowserWindow {
 
 function applySettings(settings: SettingsStore, previous: Settings | null): void {
   const { ui, recentFolders } = settings.current
-  nativeTheme.themeSource = ui.theme
+  nativeTheme.themeSource = nativeThemeSource(ui.theme)
   Menu.setApplicationMenu(
     buildMenu({
       isMac: process.platform === 'darwin',
@@ -95,7 +97,7 @@ function applySettings(settings: SettingsStore, previous: Settings | null): void
 
 function broadcastUiSettings(ui: UiSettings): void {
   for (const window of BrowserWindow.getAllWindows()) {
-    window.setBackgroundColor(backgroundColor())
+    window.setBackgroundColor(backgroundColor(ui))
     window.webContents.send(IpcChannel.SettingsChanged, ui)
   }
 }

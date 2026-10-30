@@ -9,7 +9,12 @@ export interface StatusBarProps {
   onCycleTheme: () => void
 }
 
-const THEME_LABELS: Record<ThemeSetting, string> = { system: 'System theme', light: 'Light theme', dark: 'Dark theme' }
+const THEME_LABELS: Record<ThemeSetting, string> = {
+  system: 'System theme',
+  light: 'Light theme',
+  dark: 'Dark theme',
+  'gruvbox-material-dark-hard': 'Gruvbox theme',
+}
 
 export function StatusBar({ path, dirty, wordCount, message, theme, onCycleTheme }: StatusBarProps) {
   return (
@@ -37,7 +42,7 @@ export function StatusBar({ path, dirty, wordCount, message, theme, onCycleTheme
       <span className="status-words">
         {wordCount} {wordCount === 1 ? 'word' : 'words'}
       </span>
-      <button type="button" className="status-theme" title="Switch theme (System → Light → Dark)" onClick={onCycleTheme}>
+      <button type="button" className="status-theme" title="Switch theme (System → Light → Dark → Gruvbox)" onClick={onCycleTheme}>
         {THEME_LABELS[theme]}
       </button>
     </footer>

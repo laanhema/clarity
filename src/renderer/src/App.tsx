@@ -46,14 +46,19 @@ function documentName(document: DocumentState): string {
 }
 
 const SPLITTER_WIDTH = 5
-const NEXT_THEME: Record<ThemeSetting, ThemeSetting> = { system: 'light', light: 'dark', dark: 'system' }
+const NEXT_THEME: Record<ThemeSetting, ThemeSetting> = {
+  system: 'light',
+  light: 'dark',
+  dark: 'gruvbox-material-dark-hard',
+  'gruvbox-material-dark-hard': 'system',
+}
 
 export function App() {
   const api = window.mdpad
   const [folder, setFolder] = useState<OpenedFolder | null>(null)
   const [doc, setDoc] = useState<DocumentState>(NEW_DOCUMENT)
   const [message, setMessage] = useState<string | null>(null)
-  const [settings, setSettings] = useState<UiSettings>(DEFAULT_UI_SETTINGS)
+  const [settings, setSettings] = useState<UiSettings>(() => ({ ...DEFAULT_UI_SETTINGS, theme: api.initialTheme }))
   // Native dialogs are modal, but async work around them is not: run one flow at a time.
   const busy = useRef(false)
   const latestDoc = useRef(doc)
@@ -90,6 +95,11 @@ export function App() {
       unsubscribe()
     }
   }, [api])
+
+  // styles.css picks the theme's colours and layout from this attribute.
+  useEffect(() => {
+    document.documentElement.dataset['theme'] = settings.theme
+  }, [settings.theme])
 
   useEffect(() => {
     api.watchDocument(doc.path).catch((error: unknown) => setMessage(errorMessage(error)))
@@ -299,8 +309,12 @@ export function App() {
       : `${sidebarWidth}px ${SPLITTER_WIDTH}px minmax(0, 1fr)`
 
   function panesWidth(): number {
-    const total = workspace.current?.clientWidth ?? 0
-    return Math.max(1, total - sidebarWidth - 2 * SPLITTER_WIDTH)
+    const element = workspace.current
+    if (!element) return 1
+    // Some themes pad the workspace; only the grid's content box holds the panes.
+    const style = getComputedStyle(element)
+    const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
+    return Math.max(1, element.clientWidth - (padding || 0) - sidebarWidth - 2 * SPLITTER_WIDTH)
   }
 
   return (

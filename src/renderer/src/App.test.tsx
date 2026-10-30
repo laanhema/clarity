@@ -329,6 +329,27 @@ describe('view modes and settings', () => {
     expect(screen.getByRole('button', { name: 'Light theme' })).toBeInTheDocument()
   })
 
+  it('cycles through the Gruvbox theme and marks the page with the active theme', async () => {
+    const user = userEvent.setup()
+    mock.api.getSettings.mockResolvedValue({ ...DEFAULT_UI_SETTINGS, theme: 'dark' })
+    render(<App />)
+    await user.click(await screen.findByRole('button', { name: 'Dark theme' }))
+    expect(mock.api.updateSettings).toHaveBeenCalledWith({ theme: 'gruvbox-material-dark-hard' })
+    expect(document.documentElement).toHaveAttribute('data-theme', 'gruvbox-material-dark-hard')
+
+    await user.click(screen.getByRole('button', { name: 'Gruvbox theme' }))
+    expect(mock.api.updateSettings).toHaveBeenCalledWith({ theme: 'system' })
+    expect(document.documentElement).toHaveAttribute('data-theme', 'system')
+  })
+
+  it('starts in the theme the window opened with', () => {
+    mock.api.initialTheme = 'gruvbox-material-dark-hard'
+    mock.api.getSettings.mockReturnValue(new Promise(() => undefined))
+    render(<App />)
+    expect(screen.getByRole('button', { name: 'Gruvbox theme' })).toBeInTheDocument()
+    expect(document.documentElement).toHaveAttribute('data-theme', 'gruvbox-material-dark-hard')
+  })
+
   it('remembers a resized sidebar', async () => {
     const user = userEvent.setup()
     render(<App />)

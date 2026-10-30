@@ -38,6 +38,7 @@ const THEME_ITEMS: { theme: ThemeSetting; label: string }[] = [
   { theme: 'system', label: 'Follow System' },
   { theme: 'light', label: 'Light' },
   { theme: 'dark', label: 'Dark' },
+  { theme: 'gruvbox-material-dark-hard', label: 'Gruvbox Material Dark Hard' },
 ]
 
 function recentSubmenu(options: MenuOptions): MenuItemConstructorOptions[] {

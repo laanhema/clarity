@@ -41,8 +41,16 @@ export type ReloadChoice = 'reload' | 'keep'
 export type ViewMode = 'editor' | 'split' | 'preview'
 export const VIEW_MODES = ['editor', 'split', 'preview'] as const satisfies readonly ViewMode[]
 
-export type ThemeSetting = 'system' | 'light' | 'dark'
-export const THEME_SETTINGS = ['system', 'light', 'dark'] as const satisfies readonly ThemeSetting[]
+export type ThemeSetting = 'system' | 'light' | 'dark' | 'gruvbox-material-dark-hard'
+export const THEME_SETTINGS = [
+  'system',
+  'light',
+  'dark',
+  'gruvbox-material-dark-hard',
+] as const satisfies readonly ThemeSetting[]
+
+/** The command-line switch that hands a new window's theme to its preload script, so the first paint is right. */
+export const INITIAL_THEME_SWITCH = '--mdpad-theme='
 
 /** The settings the renderer can see and change. The main process stores them in userData. */
 export interface UiSettings {
@@ -65,6 +73,8 @@ export const SIDEBAR_WIDTH_RANGE = { min: 160, max: 600 } as const
 export const EDITOR_FRACTION_RANGE = { min: 0.15, max: 0.85 } as const
 
 export interface MdpadApi {
+  /** The theme setting when the window opened, available before `getSettings` resolves. */
+  readonly initialTheme: ThemeSetting
   /** Shows the native folder picker. Resolves to null when cancelled. */
   openFolder(): Promise<OpenedFolder | null>
   /** Shows the native file picker and reads the chosen file. Resolves to null when cancelled. */

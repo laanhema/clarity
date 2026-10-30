@@ -32,7 +32,11 @@ export default defineConfig({
   renderer: {
     root: resolve(__dirname, 'src/renderer'),
     plugins: [react(), cspPlugin()],
-    // electron-vite leaves the renderer unminified by default.
-    build: { minify: true },
+    build: {
+      // electron-vite leaves the renderer unminified by default.
+      minify: true,
+      // The CSP allows fonts only from the app itself (font-src 'self'), not as data: URLs.
+      assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/.test(file) ? false : undefined),
+    },
   },
 })

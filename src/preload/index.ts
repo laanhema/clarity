@@ -1,5 +1,15 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { IpcChannel, MENU_COMMANDS, type MdpadApi, type MenuCommand, type OpenedFolder, type UiSettings } from '../shared/api'
+import {
+  INITIAL_THEME_SWITCH,
+  IpcChannel,
+  MENU_COMMANDS,
+  THEME_SETTINGS,
+  type MdpadApi,
+  type MenuCommand,
+  type OpenedFolder,
+  type ThemeSetting,
+  type UiSettings,
+} from '../shared/api'
 
 function isMenuCommand(value: unknown): value is MenuCommand {
   return typeof value === 'string' && (MENU_COMMANDS as readonly string[]).includes(value)
@@ -16,7 +26,14 @@ function subscribe(channel: string, handler: (event: IpcRendererEvent, ...args: 
   }
 }
 
+/** The theme the main process passed on the command line when it opened this window. */
+function initialTheme(): ThemeSetting {
+  const value = process.argv.find((arg) => arg.startsWith(INITIAL_THEME_SWITCH))?.slice(INITIAL_THEME_SWITCH.length)
+  return THEME_SETTINGS.find((theme) => theme === value) ?? 'system'
+}
+
 const api: MdpadApi = {
+  initialTheme: initialTheme(),
   openFolder: () => invoke(IpcChannel.OpenFolder),
   openFile: () => invoke(IpcChannel.OpenFile),
   listMarkdownFiles: () => invoke(IpcChannel.ListMarkdownFiles),

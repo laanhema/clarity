@@ -1,6 +1,13 @@
 import { act } from '@testing-library/react'
 import { vi } from 'vitest'
-import { DEFAULT_UI_SETTINGS, type MdpadApi, type MenuCommand, type OpenedFolder, type UiSettings } from '../../../shared/api'
+import {
+  DEFAULT_UI_SETTINGS,
+  type MdpadApi,
+  type MenuCommand,
+  type OpenedFolder,
+  type ThemeSetting,
+  type UiSettings,
+} from '../../../shared/api'
 
 function listenerSet<T extends unknown[]>() {
   const listeners = new Set<(...args: T) => void>()
@@ -25,6 +32,7 @@ export function installMockApi() {
   const treeChanged = listenerSet<[]>()
 
   const api = {
+    initialTheme: 'system' as ThemeSetting,
     openFolder: vi.fn<MdpadApi['openFolder']>().mockResolvedValue(null),
     openFile: vi.fn<MdpadApi['openFile']>().mockResolvedValue(null),
     listMarkdownFiles: vi.fn<MdpadApi['listMarkdownFiles']>().mockResolvedValue([]),

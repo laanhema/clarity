@@ -2,6 +2,7 @@ import type { LanguageRegistration } from '@shikijs/types'
 import type { Element, Root } from 'hast'
 import { createHighlighterCore, type HighlighterCore } from 'shiki/core'
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
+import { gruvboxMaterialDarkHard } from './gruvboxMaterialTheme'
 
 type LanguageModule = Promise<{ default: LanguageRegistration[] }>
 
@@ -79,14 +80,18 @@ export function grammarFor(language: string): string | null {
   return Object.hasOwn(LANGUAGES, resolved) ? resolved : null
 }
 
-export const THEMES = { light: 'github-light', dark: 'github-dark' } as const
+/**
+ * Every theme's code colours, by the key styles.css reads them with
+ * (`--shiki-light`, `--shiki-dark`, `--shiki-gruvbox`, …).
+ */
+export const THEMES = { light: 'github-light', dark: 'github-dark', gruvbox: gruvboxMaterialDarkHard.name } as const
 
 let highlighterPromise: Promise<HighlighterCore> | null = null
 const loadingLanguages = new Map<string, Promise<void>>()
 
 function getHighlighter(): Promise<HighlighterCore> {
   highlighterPromise ??= createHighlighterCore({
-    themes: [import('@shikijs/themes/github-light'), import('@shikijs/themes/github-dark')],
+    themes: [import('@shikijs/themes/github-light'), import('@shikijs/themes/github-dark'), gruvboxMaterialDarkHard],
     langs: [],
     // The JavaScript engine needs no WebAssembly, which the app's CSP does not allow.
     engine: createJavaScriptRegexEngine({ forgiving: true }),
@@ -119,8 +124,8 @@ export interface CodeHighlighter {
 
 /**
  * Prepares a highlighter that can colour every language in `languages`.
- * Code is coloured with both themes at once, as CSS variables, so switching
- * between light and dark needs no new rendering pass.
+ * Code is coloured with every theme at once, as CSS variables, so switching
+ * themes needs no new rendering pass.
  */
 export async function loadHighlighter(languages: Iterable<string>): Promise<CodeHighlighter> {
   const highlighter = await getHighlighter()

@@ -108,11 +108,22 @@ describe('code highlighting', () => {
     expect([...codeLanguages(tree)].sort()).toEqual(['javascript', 'python'])
   })
 
-  it('colours code blocks with light and dark theme variables', async () => {
+  it('colours code blocks with the variables of every theme', async () => {
     const out = toHtml(await renderMarkdown('```ts\nconst answer: number = 42\n```'))
-    expect(out).toContain('class="shiki shiki-themes github-light github-dark"')
-    expect(out).toMatch(/style="[^"]*--shiki-light:#[0-9a-f]+;--shiki-dark:#[0-9a-f]+/i)
+    expect(out).toContain('class="shiki shiki-themes github-light github-dark gruvbox-material-dark-hard"')
+    expect(out).toMatch(/style="[^"]*--shiki-light:#[0-9a-f]+;--shiki-dark:#[0-9a-f]+;--shiki-gruvbox:#[0-9a-f]+/i)
     expect(out).toContain('answer')
+  })
+
+  it('colours code with the Gruvbox Material palette, not the original Gruvbox', async () => {
+    const out = toHtml(await renderMarkdown('```ts\n// note\nconst answer: number = 42\n```'))
+    const gruvbox = (token: string) => new RegExp(`--shiki-gruvbox:(#[0-9a-f]+)[^>]*> ?${token}<`, 'i').exec(out)?.[1]
+    expect(gruvbox('const')?.toLowerCase()).toBe('#ea6962')
+    expect(gruvbox('number')?.toLowerCase()).toBe('#d8a657')
+    expect(gruvbox('42')?.toLowerCase()).toBe('#d3869b')
+    expect(gruvbox(':')?.toLowerCase()).toBe('#928374')
+    expect(out).toMatch(/--shiki-gruvbox-bg:#282828/i)
+    expect(out).toMatch(/--shiki-gruvbox:#928374;[^"]*--shiki-gruvbox-font-style:italic[^>]*>\/\/ note</i)
   })
 
   it('leaves blocks without a known language alone', async () => {

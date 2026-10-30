@@ -22,6 +22,10 @@
   --code-bg: #f6f8fa;
   --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --editor-size: 14px;
+  --editor-lh: 1.6;
+  --editor-pad-y: 16px;
+  --editor-pad-x: 20px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -47,6 +51,57 @@
     --editor-match-selected: rgba(234, 179, 8, 0.45);
     --code-bg: #26282c;
   }
+}
+
+/*
+ * Gruvbox Material Dark Hard (sainnhe/gruvbox-material: background "hard",
+ * foreground "material") with an orange accent, Inter and JetBrains Mono.
+ * The main process puts the window in dark mode for it, so anything this
+ * block leaves out keeps its dark value. Its layout (floating panels, the
+ * icon tree, compact spacing, rainbow headings) is at the end of this file.
+ */
+:root[data-theme='gruvbox-material-dark-hard'] {
+  color-scheme: dark;
+  --bg: #1d2021;
+  --bg-sidebar: #141617;
+  --bg-status: #282828;
+  --bg-hover: #282828;
+  --bg-active: color-mix(in srgb, #e78a4e 24%, transparent);
+  --fg: #d4be98;
+  --fg-muted: #a89984;
+  --fg-status: #ddc7a1;
+  --border: #3c3836;
+  --rule: #504945;
+  --dir: #a9b665;
+  --accent: #e78a4e;
+  --unsaved: #d8a657;
+  --danger: #ea6962;
+  --md-heading: #e78a4e;
+  --h1: #ea6962;
+  --h2: #e78a4e;
+  --h3: #d8a657;
+  --h4: #a9b665;
+  --h5: #7daea3;
+  --h6: #d3869b;
+  --md-link: #d3869b;
+  --md-url: #7daea3;
+  --md-url-decoration: underline;
+  --md-code: #a9b665;
+  --md-mark: #928374;
+  --md-list: #ea6962;
+  --md-list-weight: 700;
+  --md-quote: #928374;
+  --editor-selection: #3c3836;
+  --editor-active-line: #282828;
+  --editor-match: #473c29;
+  --editor-match-selected: color-mix(in srgb, #d8a657 40%, transparent);
+  --code-bg: #282828;
+  --inline-code-bg: #32302f;
+  --inline-code-fg: #a9b665;
+  --font-ui: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  --editor-pad-y: 10px;
+  --editor-pad-x: 14px;
 }
 
 *,
@@ -208,6 +263,14 @@ button {
   color: var(--fg-muted);
 }
 
+/* Shown only by themes with an icon tree. */
+.tree-icon {
+  display: none;
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
 .tree-file {
   padding-left: 26px;
 }
@@ -268,13 +331,13 @@ button {
 .markdown-body h1 {
   font-size: 2em;
   padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--rule, var(--border));
 }
 
 .markdown-body h2 {
   font-size: 1.5em;
   padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--rule, var(--border));
 }
 
 .markdown-body h3 {
@@ -314,15 +377,15 @@ button {
 
 .markdown-body blockquote {
   padding: 0 1em;
-  color: var(--fg-muted);
-  border-left: 0.25em solid var(--border);
+  color: var(--md-quote, var(--fg-muted));
+  border-left: 0.25em solid var(--rule, var(--border));
 }
 
 .markdown-body hr {
   height: 0.25em;
   margin: 1.5em 0;
   border: 0;
-  background: var(--border);
+  background: var(--rule, var(--border));
 }
 
 .markdown-body img {
@@ -369,7 +432,7 @@ button {
 
 .markdown-body :is(th, td) {
   padding: 6px 13px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule, var(--border));
 }
 
 .markdown-body th {
@@ -383,7 +446,7 @@ button {
 .markdown-body .footnotes {
   margin-top: 2em;
   padding-top: 1em;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--rule, var(--border));
   color: var(--fg-muted);
   font-size: 0.9em;
 }
@@ -399,8 +462,8 @@ button {
 }
 
 /*
- * Shiki colours each token with both themes as CSS variables
- * (--shiki-light, --shiki-dark); the active theme picks one set.
+ * Shiki colours each token with every theme as CSS variables
+ * (--shiki-light, --shiki-dark, --shiki-gruvbox); the active theme picks one set.
  */
 .markdown-body pre.shiki,
 .markdown-body pre.shiki span {
@@ -428,6 +491,17 @@ button {
   }
 }
 
+:root[data-theme='gruvbox-material-dark-hard'] :is(.markdown-body pre.shiki, .markdown-body pre.shiki span) {
+  color: var(--shiki-gruvbox);
+  font-style: var(--shiki-gruvbox-font-style);
+  font-weight: var(--shiki-gruvbox-font-weight);
+  text-decoration: var(--shiki-gruvbox-text-decoration);
+}
+
+:root[data-theme='gruvbox-material-dark-hard'] .markdown-body pre.shiki {
+  background-color: var(--shiki-gruvbox-bg);
+}
+
 /* Status bar */
 
 .status-bar {
@@ -437,7 +511,7 @@ button {
   padding: 3px 10px;
   background: var(--bg-status);
   border-top: 1px solid var(--border);
-  color: var(--fg-muted);
+  color: var(--fg-status, var(--fg-muted));
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -467,4 +541,120 @@ button {
 .status-theme:focus-visible {
   border-color: var(--border);
   color: var(--fg);
+}
+
+/*
+ * Gruvbox Material Dark Hard layout: floating panels on the darker base,
+ * a tree with folder and file icons, compact spacing and a colour per
+ * heading level. Colours are in its variable block at the top.
+ */
+
+[data-theme='gruvbox-material-dark-hard'] .workspace {
+  padding: 6px 6px 0;
+  background: var(--bg-sidebar);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .splitter {
+  background: transparent;
+}
+
+[data-theme='gruvbox-material-dark-hard'] :is(.splitter:hover, .splitter:focus-visible) {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+[data-theme='gruvbox-material-dark-hard'] :is(.sidebar, .pane) {
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .preview-pane {
+  overflow: auto;
+  padding: 12px 18px 40px;
+}
+
+[data-theme='gruvbox-material-dark-hard'] .sidebar-header {
+  padding: 6px 8px;
+  border-bottom-color: transparent;
+}
+
+[data-theme='gruvbox-material-dark-hard'] .sidebar-title {
+  color: var(--fg-muted);
+  font-size: 0.85em;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+[data-theme='gruvbox-material-dark-hard'] .tree-icon {
+  display: block;
+}
+
+[data-theme='gruvbox-material-dark-hard'] .tree-row {
+  gap: 6px;
+  width: calc(100% - 12px);
+  margin: 0 6px;
+  padding: 2px 8px;
+  border-radius: 5px;
+}
+
+[data-theme='gruvbox-material-dark-hard'] .tree-directory {
+  color: var(--dir);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .tree-file {
+  padding-left: 12px;
+}
+
+[data-theme='gruvbox-material-dark-hard'] .tree-file .tree-icon {
+  color: var(--fg-muted);
+}
+
+/* Indent guides */
+[data-theme='gruvbox-material-dark-hard'] .tree .tree {
+  margin-left: 20px;
+  padding-left: 0;
+  border-left: 1px solid var(--rule);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .status-bar {
+  padding: 2px 8px;
+  border-top-color: transparent;
+  background: var(--bg-sidebar);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .markdown-body h1 {
+  color: var(--h1);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .markdown-body h2 {
+  color: var(--h2);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .markdown-body h3 {
+  color: var(--h3);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .markdown-body h4 {
+  color: var(--h4);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .markdown-body h5 {
+  color: var(--h5);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .markdown-body h6 {
+  color: var(--h6);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .markdown-body a {
+  color: var(--md-link);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .markdown-body li::marker {
+  color: var(--md-list);
+}
+
+[data-theme='gruvbox-material-dark-hard'] .markdown-body :not(pre) > code {
+  background: var(--inline-code-bg);
+  color: var(--inline-code-fg);
 }

@@ -1,11 +1,10 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'
-import { markdown } from '@codemirror/lang-markdown'
-import { HighlightStyle, indentOnInput, syntaxHighlighting } from '@codemirror/language'
+import { indentOnInput } from '@codemirror/language'
 import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from '@codemirror/search'
 import { EditorState, type Extension } from '@codemirror/state'
 import { drawSelection, dropCursor, EditorView, highlightActiveLine, keymap, placeholder } from '@codemirror/view'
-import { tags } from '@lezer/highlight'
 import { useEffect, useEffectEvent, useImperativeHandle, useRef, type Ref } from 'react'
+import { markdownExtensions } from './editorMarkdown'
 
 export interface EditorHandle {
   focus(): void
@@ -27,25 +26,12 @@ export interface EditorProps {
   ref?: Ref<EditorHandle>
 }
 
-/** Markdown colours come from CSS variables, so they follow the light and dark themes. */
-const markdownHighlight = HighlightStyle.define([
-  { tag: tags.heading, color: 'var(--md-heading)', fontWeight: '600' },
-  { tag: tags.strong, fontWeight: '700' },
-  { tag: tags.emphasis, fontStyle: 'italic' },
-  { tag: tags.strikethrough, textDecoration: 'line-through' },
-  { tag: [tags.link, tags.url], color: 'var(--md-link)' },
-  { tag: tags.monospace, color: 'var(--md-code)' },
-  { tag: tags.quote, color: 'var(--fg-muted)', fontStyle: 'italic' },
-  { tag: [tags.processingInstruction, tags.meta, tags.contentSeparator], color: 'var(--md-mark)' },
-  { tag: tags.list, color: 'var(--md-mark)' },
-])
-
 const editorTheme = EditorView.theme({
   '&': { flex: '1', minHeight: '0', backgroundColor: 'var(--bg)', color: 'var(--fg)' },
   '&.cm-focused': { outline: 'none' },
-  '.cm-scroller': { fontFamily: 'var(--font-mono)', fontSize: '14px', lineHeight: '1.6' },
-  '.cm-content': { padding: '16px 0', caretColor: 'var(--fg)' },
-  '.cm-line': { padding: '0 20px' },
+  '.cm-scroller': { fontFamily: 'var(--font-mono)', fontSize: 'var(--editor-size)', lineHeight: 'var(--editor-lh)' },
+  '.cm-content': { padding: 'var(--editor-pad-y) 0', caretColor: 'var(--fg)' },
+  '.cm-line': { padding: '0 var(--editor-pad-x)' },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--fg)' },
   '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, ::selection':
     { backgroundColor: 'var(--editor-selection)' },
@@ -82,8 +68,7 @@ function createState(doc: string, onDocChanged: (value: string) => void): Editor
     highlightActiveLine(),
     highlightSelectionMatches(),
     search({ top: true }),
-    markdown(),
-    syntaxHighlighting(markdownHighlight),
+    markdownExtensions,
     EditorView.lineWrapping,
     EditorState.tabSize.of(4),
     placeholder('Start writing Markdown…'),
