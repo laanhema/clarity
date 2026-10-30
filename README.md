@@ -63,7 +63,7 @@ npm run lint       # ESLint
 npm run dist       # build, then package a Linux AppImage and .deb into release/
 ```
 
-If `npm run dev` says Electron failed to install, npm skipped Electron's download step. Run `node node_modules/electron/install.js` once.
+`npm install` also downloads the Electron binary (`scripts/install-electron.mjs`), which `npm run dev` needs. Set `ELECTRON_SKIP_BINARY_DOWNLOAD=1` to skip the download. If npm ran with `--ignore-scripts`, run `node scripts/install-electron.mjs` once.
 
 ### Packaging
 

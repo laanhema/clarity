@@ -9,6 +9,7 @@
   "author": "Lauri Makkonen",
   "license": "MIT",
   "scripts": {
+    "postinstall": "node scripts/install-electron.mjs",
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
     "start": "electron-vite preview",
