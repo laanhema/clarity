@@ -11,6 +11,15 @@
   --accent: #2e6be6;
   --unsaved: #d4740b;
   --danger: #c4314b;
+  --md-heading: #0b4fa8;
+  --md-link: #2e6be6;
+  --md-code: #9a3d00;
+  --md-mark: #8c959f;
+  --editor-selection: rgba(46, 107, 230, 0.2);
+  --editor-active-line: rgba(0, 0, 0, 0.025);
+  --editor-match: rgba(234, 179, 8, 0.25);
+  --editor-match-selected: rgba(234, 179, 8, 0.55);
+  --code-bg: #f6f8fa;
   --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
 }
@@ -28,6 +37,15 @@
     --accent: #6e9eff;
     --unsaved: #f0a64a;
     --danger: #ff7b8a;
+    --md-heading: #8cb4ff;
+    --md-link: #6e9eff;
+    --md-code: #f0a070;
+    --md-mark: #6e7681;
+    --editor-selection: rgba(110, 158, 255, 0.28);
+    --editor-active-line: rgba(255, 255, 255, 0.035);
+    --editor-match: rgba(234, 179, 8, 0.22);
+    --editor-match-selected: rgba(234, 179, 8, 0.45);
+    --code-bg: #26282c;
   }
 }
 
@@ -56,25 +74,60 @@ button {
   color: inherit;
 }
 
+[hidden] {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .app {
-  display: grid;
-  grid-template-columns: minmax(180px, 260px) minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'sidebar editor preview'
-    'status status status';
+  display: flex;
+  flex-direction: column;
   height: 100%;
+}
+
+/* Columns are set inline from the view mode and the saved pane sizes. */
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.splitter {
+  position: relative;
+  background: var(--border);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.splitter::after {
+  /* A wider, invisible grab area. */
+  content: '';
+  position: absolute;
+  inset: 0 -3px;
+}
+
+.splitter:hover,
+.splitter:focus-visible {
+  background: var(--accent);
+  outline: none;
 }
 
 /* Sidebar */
 
 .sidebar {
-  grid-area: sidebar;
   display: flex;
   flex-direction: column;
   min-height: 0;
   background: var(--bg-sidebar);
-  border-right: 1px solid var(--border);
 }
 
 .sidebar-header {
@@ -183,37 +236,201 @@ button {
 }
 
 .editor-pane {
-  grid-area: editor;
   display: flex;
-  border-right: 1px solid var(--border);
-}
-
-.editor {
-  flex: 1;
-  padding: 16px 20px;
-  border: 0;
-  outline: none;
-  resize: none;
-  background: var(--bg);
-  color: var(--fg);
-  font: 14px/1.6 var(--font-mono);
-  tab-size: 4;
+  flex-direction: column;
 }
 
 .preview-pane {
-  grid-area: preview;
   overflow: auto;
-  padding: 16px 24px;
+  padding: 20px 28px 40px;
 }
 
-.preview-placeholder {
+/* Preview: GitHub-like Markdown styles */
+
+.markdown-body {
+  max-width: 860px;
+  margin: 0 auto;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body :is(h1, h2, h3, h4, h5, h6) {
+  margin: 1.5em 0 0.6em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown-body h1 {
+  font-size: 2em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown-body h2 {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown-body h3 {
+  font-size: 1.25em;
+}
+
+.markdown-body :is(p, ul, ol, blockquote, table, pre, details, dl) {
+  margin: 0 0 1em;
+}
+
+.markdown-body :is(ul, ol) {
+  padding-left: 2em;
+}
+
+.markdown-body li + li {
+  margin-top: 0.25em;
+}
+
+.markdown-body .contains-task-list {
+  list-style: none;
+  padding-left: 1.2em;
+}
+
+.markdown-body .task-list-item input {
+  margin: 0 0.4em 0 -1.2em;
+  vertical-align: middle;
+}
+
+.markdown-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.markdown-body blockquote {
+  padding: 0 1em;
   color: var(--fg-muted);
+  border-left: 0.25em solid var(--border);
+}
+
+.markdown-body hr {
+  height: 0.25em;
+  margin: 1.5em 0;
+  border: 0;
+  background: var(--border);
+}
+
+.markdown-body img {
+  max-width: 100%;
+}
+
+.markdown-body :is(code, kbd) {
+  font-family: var(--font-mono);
+  font-size: 85%;
+}
+
+.markdown-body :not(pre) > code {
+  padding: 0.2em 0.4em;
+  border-radius: 6px;
+  background: var(--code-bg);
+}
+
+.markdown-body kbd {
+  padding: 0.1em 0.4em;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+}
+
+.markdown-body pre {
+  padding: 14px 16px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--code-bg);
+  line-height: 1.45;
+}
+
+.markdown-body pre > code {
+  font-size: 13px;
+}
+
+.markdown-body table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  border-collapse: collapse;
+}
+
+.markdown-body :is(th, td) {
+  padding: 6px 13px;
+  border: 1px solid var(--border);
+}
+
+.markdown-body th {
+  font-weight: 600;
+}
+
+.markdown-body tr:nth-child(2n) {
+  background: var(--bg-sidebar);
+}
+
+.markdown-body .footnotes {
+  margin-top: 2em;
+  padding-top: 1em;
+  border-top: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: 0.9em;
+}
+
+.preview-image-placeholder,
+.preview-image-loading {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  color: var(--fg-muted);
+  font-size: 0.9em;
+}
+
+/*
+ * Shiki colours each token with both themes as CSS variables
+ * (--shiki-light, --shiki-dark); the active theme picks one set.
+ */
+.markdown-body pre.shiki,
+.markdown-body pre.shiki span {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style);
+  font-weight: var(--shiki-light-font-weight);
+  text-decoration: var(--shiki-light-text-decoration);
+}
+
+.markdown-body pre.shiki {
+  background-color: var(--shiki-light-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  .markdown-body pre.shiki,
+  .markdown-body pre.shiki span {
+    color: var(--shiki-dark);
+    font-style: var(--shiki-dark-font-style);
+    font-weight: var(--shiki-dark-font-weight);
+    text-decoration: var(--shiki-dark-text-decoration);
+  }
+
+  .markdown-body pre.shiki {
+    background-color: var(--shiki-dark-bg);
+  }
 }
 
 /* Status bar */
 
 .status-bar {
-  grid-area: status;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -235,4 +452,19 @@ button {
 
 .status-message {
   color: var(--danger);
+}
+
+.status-theme {
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.status-theme:hover,
+.status-theme:focus-visible {
+  border-color: var(--border);
+  color: var(--fg);
 }

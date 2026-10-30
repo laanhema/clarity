@@ -20,9 +20,23 @@ export interface OpenedFile {
   content: string
 }
 
-export type MenuCommand = 'open-file' | 'open-folder' | 'save' | 'save-as'
+export type MenuCommand = 'new-file' | 'open-file' | 'open-folder' | 'save' | 'save-as' | 'undo' | 'redo' | 'find'
+
+export const MENU_COMMANDS = [
+  'new-file',
+  'open-file',
+  'open-folder',
+  'save',
+  'save-as',
+  'undo',
+  'redo',
+  'find',
+] as const satisfies readonly MenuCommand[]
 
 export type UnsavedChoice = 'save' | 'discard' | 'cancel'
+
+/** What to do when the open file changed on disk while it has unsaved edits. */
+export type ReloadChoice = 'reload' | 'keep'
 
 export type ViewMode = 'editor' | 'split' | 'preview'
 export const VIEW_MODES = ['editor', 'split', 'preview'] as const satisfies readonly ViewMode[]
@@ -63,14 +77,35 @@ export interface MdpadApi {
   saveAs(content: string, suggestedPath: string | null): Promise<string | null>
   /** Asks the user what to do with unsaved changes in a native dialog. */
   confirmUnsaved(documentName: string): Promise<UnsavedChoice>
+  /** Asks whether to reload a file that another program changed while it has unsaved edits. */
+  confirmReload(documentName: string): Promise<ReloadChoice>
   /** Tells the main process whether closing the window would lose changes. */
   setDocumentDirty(dirty: boolean): void
   /** Closes the window after the renderer has dealt with unsaved changes. */
   closeWindow(): void
+  /** Starts watching the open document for changes by other programs; null stops watching. */
+  watchDocument(path: string | null): Promise<void>
+  /**
+   * Reads an image that a document links with a relative path, as a data URL.
+   * Only images inside the open folder load; anything else resolves to null.
+   */
+  loadImage(documentPath: string, src: string): Promise<string | null>
+  /** Opens an http or https link in the system browser. Other links are ignored. */
+  openExternal(url: string): void
+  getSettings(): Promise<UiSettings>
+  updateSettings(patch: Partial<UiSettings>): void
   /** Subscribes to menu commands. Returns an unsubscribe function. */
   onMenuCommand(listener: (command: MenuCommand) => void): () => void
   /** Subscribes to close requests made while the document is dirty. Returns an unsubscribe function. */
   onCloseRequested(listener: () => void): () => void
+  /** Subscribes to settings changes, including those made from the menu. */
+  onSettingsChanged(listener: (settings: UiSettings) => void): () => void
+  /** Subscribes to folders opened from the Open Recent menu. */
+  onFolderOpened(listener: (folder: OpenedFolder) => void): () => void
+  /** Subscribes to changes of the watched document made by other programs. */
+  onDocumentChanged(listener: (path: string) => void): () => void
+  /** Subscribes to Markdown files being added to or removed from the open folder. */
+  onTreeChanged(listener: () => void): () => void
 }
 
 export const IpcChannel = {
@@ -81,10 +116,20 @@ export const IpcChannel = {
   WriteFile: 'mdpad:write-file',
   SaveAs: 'mdpad:save-as',
   ConfirmUnsaved: 'mdpad:confirm-unsaved',
+  ConfirmReload: 'mdpad:confirm-reload',
   SetDocumentDirty: 'mdpad:set-document-dirty',
   CloseWindow: 'mdpad:close-window',
+  WatchDocument: 'mdpad:watch-document',
+  LoadImage: 'mdpad:load-image',
+  OpenExternal: 'mdpad:open-external',
+  GetSettings: 'mdpad:get-settings',
+  UpdateSettings: 'mdpad:update-settings',
   MenuCommand: 'mdpad:menu-command',
   CloseRequested: 'mdpad:close-requested',
+  SettingsChanged: 'mdpad:settings-changed',
+  FolderOpened: 'mdpad:folder-opened',
+  DocumentChanged: 'mdpad:document-changed',
+  TreeChanged: 'mdpad:tree-changed',
 } as const
 
 export const MARKDOWN_EXTENSIONS = ['.md', '.markdown'] as const

@@ -6,9 +6,15 @@ import {
   type FileTreeNode,
   type OpenedFile,
   type OpenedFolder,
+  type ReloadChoice,
+  type UiSettings,
   type UnsavedChoice,
 } from '../shared/api'
 import { listMarkdownTree } from './fileTree'
+import { MAX_IMAGE_BYTES, imageMimeType } from './images'
+import { openExternally } from './security'
+import { addRecentFolder, sanitizeUiPatch, type SettingsStore } from './settings'
+import { watchDocumentFile, watchFolderTree } from './watchers'
 import { stateFor, type WindowState } from './windowState'
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024
@@ -44,15 +50,52 @@ async function exists(filePath: string): Promise<boolean> {
   }
 }
 
-async function openFolder(state: WindowState): Promise<OpenedFolder | null> {
+function send(state: WindowState, channel: string, ...args: unknown[]): void {
+  if (!state.window.isDestroyed()) state.window.webContents.send(channel, ...args)
+}
+
+/**
+ * Makes `folder` the window's open folder: grants access, watches it for
+ * added and removed files, and records it in Open Recent. The open document
+ * stays writable even when it lies outside the new folder.
+ */
+export async function useFolder(state: WindowState, folder: string, settings: SettingsStore): Promise<OpenedFolder> {
+  if (state.documentPath) state.scope.keepFile(state.documentPath)
+  const rootPath = await state.scope.grantFolder(folder)
+  state.stopFolderWatch?.()
+  state.stopFolderWatch = watchFolderTree(rootPath, () => send(state, IpcChannel.TreeChanged))
+  settings.update((current) => ({ ...current, recentFolders: addRecentFolder(current.recentFolders, rootPath) }))
+  return { rootPath, tree: await listMarkdownTree(rootPath) }
+}
+
+/** Opens a folder from the Open Recent menu and hands it to the renderer. */
+export async function openRecentFolder(state: WindowState, folder: string, settings: SettingsStore): Promise<void> {
+  let opened: OpenedFolder
+  try {
+    opened = await useFolder(state, folder, settings)
+  } catch {
+    settings.update((current) => ({
+      ...current,
+      recentFolders: current.recentFolders.filter((entry) => entry !== folder),
+    }))
+    await dialog.showMessageBox(state.window, {
+      type: 'error',
+      message: `"${path.basename(folder)}" can no longer be opened.`,
+      detail: `${folder}\n\nIt was removed from Open Recent.`,
+    })
+    return
+  }
+  send(state, IpcChannel.FolderOpened, opened)
+}
+
+async function openFolder(state: WindowState, settings: SettingsStore): Promise<OpenedFolder | null> {
   const result = await dialog.showOpenDialog(state.window, {
     title: 'Open Folder',
     properties: ['openDirectory', 'createDirectory'],
   })
   const chosen = result.filePaths[0]
   if (result.canceled || !chosen) return null
-  const rootPath = await state.scope.grantFolder(chosen)
-  return { rootPath, tree: await listMarkdownTree(rootPath) }
+  return useFolder(state, chosen, settings)
 }
 
 async function openFile(state: WindowState): Promise<OpenedFile | null> {
@@ -118,8 +161,49 @@ async function confirmUnsaved(state: WindowState, documentName: string): Promise
   return choices[response] ?? 'cancel'
 }
 
-export function registerIpcHandlers(): void {
-  ipcMain.handle(IpcChannel.OpenFolder, (event) => openFolder(senderState(event)))
+async function confirmReload(state: WindowState, documentName: string): Promise<ReloadChoice> {
+  const { response } = await dialog.showMessageBox(state.window, {
+    type: 'warning',
+    buttons: ['Reload', 'Keep My Changes'],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+    message: `${documentName} was changed by another program.`,
+    detail:
+      'Reload it from disk and lose your unsaved changes, or keep your version? If you keep it, saving replaces the file on disk.',
+  })
+  return response === 0 ? 'reload' : 'keep'
+}
+
+async function watchDocument(state: WindowState, requested: unknown): Promise<void> {
+  const generation = ++state.documentWatchGeneration
+  state.stopDocumentWatch?.()
+  state.stopDocumentWatch = null
+  state.documentPath = null
+  if (requested === null) return
+
+  const reportedPath = requireString(requested, 'path')
+  const realPath = await state.scope.resolveForRead(reportedPath)
+  if (generation !== state.documentWatchGeneration) return
+  state.documentPath = realPath
+  state.stopDocumentWatch = watchDocumentFile(realPath, () => send(state, IpcChannel.DocumentChanged, reportedPath))
+}
+
+async function loadImage(state: WindowState, documentPath: unknown, src: unknown): Promise<string | null> {
+  try {
+    const imagePath = await state.scope.resolveImage(documentPath, src)
+    const info = await stat(imagePath)
+    if (!info.isFile() || info.size > MAX_IMAGE_BYTES) return null
+    const data = await readFile(imagePath)
+    return `data:${imageMimeType(imagePath)};base64,${data.toString('base64')}`
+  } catch {
+    // A missing or forbidden image shows as its alt text; there is nothing to report.
+    return null
+  }
+}
+
+export function registerIpcHandlers(settings: SettingsStore): void {
+  ipcMain.handle(IpcChannel.OpenFolder, (event) => openFolder(senderState(event), settings))
 
   ipcMain.handle(IpcChannel.OpenFile, (event) => openFile(senderState(event)))
 
@@ -148,6 +232,33 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannel.ConfirmUnsaved, (event, documentName: unknown) =>
     confirmUnsaved(senderState(event), requireString(documentName, 'documentName')),
   )
+
+  ipcMain.handle(IpcChannel.ConfirmReload, (event, documentName: unknown) =>
+    confirmReload(senderState(event), requireString(documentName, 'documentName')),
+  )
+
+  ipcMain.handle(IpcChannel.WatchDocument, (event, requested: unknown) => watchDocument(senderState(event), requested))
+
+  ipcMain.handle(IpcChannel.LoadImage, (event, documentPath: unknown, src: unknown) =>
+    loadImage(senderState(event), documentPath, src),
+  )
+
+  ipcMain.handle(IpcChannel.GetSettings, (event): UiSettings => {
+    senderState(event)
+    return settings.current.ui
+  })
+
+  ipcMain.on(IpcChannel.UpdateSettings, (event, patch: unknown) => {
+    senderState(event)
+    const valid = sanitizeUiPatch(patch)
+    if (Object.keys(valid).length === 0) return
+    settings.update((current) => ({ ...current, ui: { ...current.ui, ...valid } }))
+  })
+
+  ipcMain.on(IpcChannel.OpenExternal, (event, url: unknown) => {
+    senderState(event)
+    if (typeof url === 'string') openExternally(url)
+  })
 
   ipcMain.on(IpcChannel.SetDocumentDirty, (event, dirty: unknown) => {
     senderState(event).dirty = dirty === true

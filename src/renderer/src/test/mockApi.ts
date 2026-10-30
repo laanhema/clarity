@@ -1,11 +1,28 @@
 import { act } from '@testing-library/react'
 import { vi } from 'vitest'
-import type { MdpadApi, MenuCommand } from '../../../shared/api'
+import { DEFAULT_UI_SETTINGS, type MdpadApi, type MenuCommand, type OpenedFolder, type UiSettings } from '../../../shared/api'
+
+function listenerSet<T extends unknown[]>() {
+  const listeners = new Set<(...args: T) => void>()
+  return {
+    subscribe: (listener: (...args: T) => void) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
+    emit: (...args: T) => act(() => listeners.forEach((listener) => listener(...args))),
+  }
+}
 
 /** Installs a fake `window.mdpad` whose calls tests can inspect and steer. */
 export function installMockApi() {
-  const menuListeners = new Set<(command: MenuCommand) => void>()
-  const closeListeners = new Set<() => void>()
+  const menu = listenerSet<[MenuCommand]>()
+  const close = listenerSet<[]>()
+  const settings = listenerSet<[UiSettings]>()
+  const folderOpened = listenerSet<[OpenedFolder]>()
+  const documentChanged = listenerSet<[string]>()
+  const treeChanged = listenerSet<[]>()
 
   const api = {
     openFolder: vi.fn<MdpadApi['openFolder']>().mockResolvedValue(null),
@@ -15,16 +32,20 @@ export function installMockApi() {
     writeFile: vi.fn<MdpadApi['writeFile']>().mockResolvedValue(undefined),
     saveAs: vi.fn<MdpadApi['saveAs']>().mockResolvedValue(null),
     confirmUnsaved: vi.fn<MdpadApi['confirmUnsaved']>().mockResolvedValue('cancel'),
+    confirmReload: vi.fn<MdpadApi['confirmReload']>().mockResolvedValue('keep'),
     setDocumentDirty: vi.fn<MdpadApi['setDocumentDirty']>(),
     closeWindow: vi.fn<MdpadApi['closeWindow']>(),
-    onMenuCommand: vi.fn<MdpadApi['onMenuCommand']>((listener) => {
-      menuListeners.add(listener)
-      return () => menuListeners.delete(listener)
-    }),
-    onCloseRequested: vi.fn<MdpadApi['onCloseRequested']>((listener) => {
-      closeListeners.add(listener)
-      return () => closeListeners.delete(listener)
-    }),
+    watchDocument: vi.fn<MdpadApi['watchDocument']>().mockResolvedValue(undefined),
+    loadImage: vi.fn<MdpadApi['loadImage']>().mockResolvedValue(null),
+    openExternal: vi.fn<MdpadApi['openExternal']>(),
+    getSettings: vi.fn<MdpadApi['getSettings']>().mockResolvedValue(DEFAULT_UI_SETTINGS),
+    updateSettings: vi.fn<MdpadApi['updateSettings']>(),
+    onMenuCommand: vi.fn<MdpadApi['onMenuCommand']>(menu.subscribe),
+    onCloseRequested: vi.fn<MdpadApi['onCloseRequested']>(close.subscribe),
+    onSettingsChanged: vi.fn<MdpadApi['onSettingsChanged']>(settings.subscribe),
+    onFolderOpened: vi.fn<MdpadApi['onFolderOpened']>(folderOpened.subscribe),
+    onDocumentChanged: vi.fn<MdpadApi['onDocumentChanged']>(documentChanged.subscribe),
+    onTreeChanged: vi.fn<MdpadApi['onTreeChanged']>(treeChanged.subscribe),
   } satisfies MdpadApi
 
   window.mdpad = api
@@ -32,12 +53,16 @@ export function installMockApi() {
   return {
     api,
     /** Simulates a menu item or its keyboard shortcut. */
-    sendMenuCommand(command: MenuCommand) {
-      act(() => menuListeners.forEach((listener) => listener(command)))
-    },
+    sendMenuCommand: (command: MenuCommand) => menu.emit(command),
     /** Simulates the main process asking to close a window with unsaved changes. */
-    requestClose() {
-      act(() => closeListeners.forEach((listener) => listener()))
-    },
+    requestClose: () => close.emit(),
+    /** Simulates a settings change made from the menu. */
+    changeSettings: (next: UiSettings) => settings.emit(next),
+    /** Simulates Open Recent. */
+    openFolderFromMenu: (folder: OpenedFolder) => folderOpened.emit(folder),
+    /** Simulates another program changing the watched document. */
+    changeDocumentOnDisk: (path: string) => documentChanged.emit(path),
+    /** Simulates files being added or removed in the open folder. */
+    changeTree: () => treeChanged.emit(),
   }
 }

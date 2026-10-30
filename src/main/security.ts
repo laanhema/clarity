@@ -1,7 +1,8 @@
 import { session, shell, type WebContents } from 'electron'
 import { isSafeExternalUrl } from './externalUrl'
 
-function openExternally(url: string): void {
+/** Opens a web link in the system browser; anything that is not http or https is dropped. */
+export function openExternally(url: string): void {
   if (isSafeExternalUrl(url)) void shell.openExternal(url)
 }
 

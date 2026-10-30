@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { EditorView } from '@codemirror/view'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { OpenedFolder } from '../../shared/api'
+import { DEFAULT_UI_SETTINGS, type OpenedFolder } from '../../shared/api'
 import { App } from './App'
 import { installMockApi } from './test/mockApi'
 
@@ -27,7 +28,30 @@ beforeEach(() => {
   mock.api.readFile.mockImplementation((path) => Promise.resolve(files[path] ?? ''))
 })
 
-const editor = () => screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'Markdown source' })
+/** CodeMirror lives in the editor pane's shadow root, out of reach of `screen` queries. */
+function editorRoot(): ShadowRoot {
+  const root = document.querySelector('section[aria-label="Editor"]')?.shadowRoot
+  if (!root) throw new Error('No editor')
+  return root
+}
+
+const editor = () => within(editorRoot() as unknown as HTMLElement).getByRole('textbox', { name: 'Markdown source' })
+
+function editorView(): EditorView {
+  const view = EditorView.findFromDOM(editor())
+  if (!view) throw new Error('No editor')
+  return view
+}
+
+const editorText = () => editorView().state.doc.toString()
+
+/** Types at the end of the document, as the user would. */
+function typeInEditor(text: string): void {
+  act(() => {
+    const view = editorView()
+    view.dispatch({ changes: { from: view.state.doc.length, insert: text }, userEvent: 'input.type' })
+  })
+}
 
 /** Opens the test folder and loads first.md, then edits it so it has unsaved changes. */
 async function openFirstFileAndEdit() {
@@ -35,8 +59,8 @@ async function openFirstFileAndEdit() {
   render(<App />)
   await user.click(screen.getByRole('button', { name: 'Open Folder…' }))
   await user.click(await screen.findByRole('button', { name: 'first.md' }))
-  await waitFor(() => expect(editor()).toHaveValue('# First'))
-  await user.type(editor(), ' edited')
+  await waitFor(() => expect(editorText()).toBe('# First'))
+  typeInEditor(' edited')
   return user
 }
 
@@ -66,9 +90,9 @@ describe('unsaved changes', () => {
     render(<App />)
     await user.click(screen.getByRole('button', { name: 'Open Folder…' }))
     await user.click(await screen.findByRole('button', { name: 'first.md' }))
-    await waitFor(() => expect(editor()).toHaveValue('# First'))
+    await waitFor(() => expect(editorText()).toBe('# First'))
     await user.click(screen.getByRole('button', { name: 'second.md' }))
-    await waitFor(() => expect(editor()).toHaveValue('# Second'))
+    await waitFor(() => expect(editorText()).toBe('# Second'))
     expect(mock.api.confirmUnsaved).not.toHaveBeenCalled()
   })
 
@@ -78,7 +102,7 @@ describe('unsaved changes', () => {
     await user.click(screen.getByRole('button', { name: 'second.md' }))
 
     await waitFor(() => expect(mock.api.confirmUnsaved).toHaveBeenCalledWith('first.md'))
-    expect(editor()).toHaveValue('# First edited')
+    expect(editorText()).toBe('# First edited')
     expect(mock.api.readFile).not.toHaveBeenCalledWith('/notes/second.md')
     expect(mock.api.writeFile).not.toHaveBeenCalled()
   })
@@ -88,7 +112,7 @@ describe('unsaved changes', () => {
     mock.api.confirmUnsaved.mockResolvedValue('discard')
     await user.click(screen.getByRole('button', { name: /second\.md/ }))
 
-    await waitFor(() => expect(editor()).toHaveValue('# Second'))
+    await waitFor(() => expect(editorText()).toBe('# Second'))
     expect(mock.api.writeFile).not.toHaveBeenCalled()
     expect(screen.getByText('Saved')).toBeInTheDocument()
   })
@@ -98,7 +122,7 @@ describe('unsaved changes', () => {
     mock.api.confirmUnsaved.mockResolvedValue('save')
     await user.click(screen.getByRole('button', { name: /second\.md/ }))
 
-    await waitFor(() => expect(editor()).toHaveValue('# Second'))
+    await waitFor(() => expect(editorText()).toBe('# Second'))
     expect(mock.api.writeFile).toHaveBeenCalledWith('/notes/first.md', '# First edited')
   })
 
@@ -109,23 +133,23 @@ describe('unsaved changes', () => {
     await user.click(screen.getByRole('button', { name: /second\.md/ }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Disk full')
-    expect(editor()).toHaveValue('# First edited')
+    expect(editorText()).toBe('# First edited')
   })
 
   it('asks before replacing the document with Open File', async () => {
-    const user = await openFirstFileAndEdit()
+    await openFirstFileAndEdit()
     mock.api.openFile.mockResolvedValue({ path: '/elsewhere/other.md', content: 'Other' })
     mock.api.confirmUnsaved.mockResolvedValue('cancel')
     mock.sendMenuCommand('open-file')
 
     await waitFor(() => expect(mock.api.confirmUnsaved).toHaveBeenCalled())
-    expect(editor()).toHaveValue('# First edited')
+    expect(editorText()).toBe('# First edited')
 
     mock.api.confirmUnsaved.mockResolvedValue('discard')
     mock.sendMenuCommand('open-file')
-    await waitFor(() => expect(editor()).toHaveValue('Other'))
+    await waitFor(() => expect(editorText()).toBe('Other'))
     expect(screen.getByText('/elsewhere/other.md')).toBeInTheDocument()
-    await user.type(editor(), '!')
+    typeInEditor('!')
     expect(screen.getByText('Unsaved')).toBeInTheDocument()
   })
 })
@@ -142,9 +166,8 @@ describe('saving', () => {
   })
 
   it('uses Save As for a new document and adopts the chosen path', async () => {
-    const user = userEvent.setup()
     render(<App />)
-    await user.type(editor(), 'Fresh words')
+    typeInEditor('Fresh words')
     mock.api.saveAs.mockResolvedValue('/notes/fresh.md')
     mock.sendMenuCommand('save')
 
@@ -206,9 +229,8 @@ describe('closing the window', () => {
   })
 
   it('stays open when saving a new document is cancelled in Save As', async () => {
-    const user = userEvent.setup()
     render(<App />)
-    await user.type(editor(), 'Draft')
+    typeInEditor('Draft')
     mock.api.confirmUnsaved.mockResolvedValue('save')
     mock.api.saveAs.mockResolvedValue(null)
     mock.requestClose()
@@ -216,5 +238,216 @@ describe('closing the window', () => {
     await waitFor(() => expect(mock.api.saveAs).toHaveBeenCalled())
     expect(mock.api.closeWindow).not.toHaveBeenCalled()
     expect(mock.api.confirmUnsaved).toHaveBeenCalledWith('Untitled')
+  })
+})
+
+describe('preview', () => {
+  const preview = () => screen.getByRole('region', { name: 'Preview' })
+
+  it('renders the Markdown shortly after typing stops', async () => {
+    render(<App />)
+    typeInEditor('# Title\n\n- [x] done\n\n| a |\n| - |\n| 1 |')
+    expect(await within(preview()).findByRole('heading', { name: 'Title' })).toBeInTheDocument()
+    expect(within(preview()).getByRole('checkbox')).toBeChecked()
+    expect(within(preview()).getByRole('table')).toBeInTheDocument()
+  })
+
+  it('never renders scripts or event handlers', async () => {
+    render(<App />)
+    typeInEditor('ok <img src="x.png" onerror="window.hacked = 1"> <script>window.hacked = 2</script>')
+    await within(preview()).findByText(/ok/)
+    expect(preview().innerHTML).not.toMatch(/script|onerror/)
+  })
+
+  it('opens web links in the browser and ignores unsafe ones', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    typeInEditor('[web](https://example.com/page) [bad](javascript:alert(1)) [mail](mailto:a@example.com)')
+    await user.click(await within(preview()).findByText('web'))
+    expect(mock.api.openExternal).toHaveBeenCalledWith('https://example.com/page')
+    await user.click(within(preview()).getByText('bad'))
+    await user.click(within(preview()).getByText('mail'))
+    expect(mock.api.openExternal).toHaveBeenCalledOnce()
+  })
+
+  it('opens linked Markdown files of the folder in the editor', async () => {
+    files['/notes/first.md'] = 'See [the second](second.md) and [outside](../x.md).'
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Open Folder…' }))
+    await user.click(await screen.findByRole('button', { name: 'first.md' }))
+    await user.click(await within(preview()).findByText('outside'))
+    expect(mock.api.readFile).not.toHaveBeenCalledWith('/x.md')
+    await user.click(within(preview()).getByText('the second'))
+    await waitFor(() => expect(editorText()).toBe('# Second'))
+    files['/notes/first.md'] = '# First'
+  })
+
+  it('loads relative images through the main process and leaves remote ones out', async () => {
+    files['/notes/first.md'] = '![local](img/a.png) ![remote](https://example.com/b.png)'
+    mock.api.loadImage.mockResolvedValue('data:image/png;base64,AAAA')
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Open Folder…' }))
+    await user.click(await screen.findByRole('button', { name: 'first.md' }))
+    expect(await within(preview()).findByRole('img', { name: 'local' })).toHaveAttribute(
+      'src',
+      'data:image/png;base64,AAAA',
+    )
+    expect(mock.api.loadImage).toHaveBeenCalledWith('/notes/first.md', 'img/a.png')
+    expect(mock.api.loadImage).toHaveBeenCalledOnce()
+    expect(within(preview()).getByText('remote')).toHaveClass('preview-image-placeholder')
+    files['/notes/first.md'] = '# First'
+  })
+})
+
+describe('view modes and settings', () => {
+  // Hidden elements have no accessible name, so find the panes by their label attribute.
+  const pane = (label: string) => {
+    const element = document.querySelector(`section[aria-label="${label}"]`)
+    if (!element) throw new Error(`No ${label} pane`)
+    return element
+  }
+
+  it('shows only the panes of the chosen view mode', async () => {
+    mock.api.getSettings.mockResolvedValue({ ...DEFAULT_UI_SETTINGS, viewMode: 'preview' })
+    render(<App />)
+    await waitFor(() => expect(pane('Editor')).not.toBeVisible())
+    expect(screen.getByRole('region', { name: 'Preview' })).toBeVisible()
+
+    mock.changeSettings({ ...DEFAULT_UI_SETTINGS, viewMode: 'editor' })
+    expect(screen.getByRole('region', { name: 'Editor' })).toBeVisible()
+    expect(pane('Preview')).not.toBeVisible()
+    expect(screen.queryByRole('separator', { name: 'Resize editor and preview' })).not.toBeInTheDocument()
+  })
+
+  it('cycles the theme from the status bar', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'System theme' }))
+    expect(mock.api.updateSettings).toHaveBeenCalledWith({ theme: 'light' })
+    expect(screen.getByRole('button', { name: 'Light theme' })).toBeInTheDocument()
+  })
+
+  it('remembers a resized sidebar', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    const splitter = screen.getByRole('separator', { name: 'Resize sidebar' })
+    splitter.focus()
+    await user.keyboard('{ArrowRight}')
+    expect(mock.api.updateSettings).toHaveBeenCalledWith({ sidebarWidth: 256 })
+    expect(splitter).toHaveAttribute('aria-valuenow', '256')
+  })
+
+  it('switches to split view to find text from preview-only view', async () => {
+    mock.api.getSettings.mockResolvedValue({ ...DEFAULT_UI_SETTINGS, viewMode: 'preview' })
+    render(<App />)
+    await waitFor(() => expect(pane('Editor')).not.toBeVisible())
+    mock.sendMenuCommand('find')
+    expect(mock.api.updateSettings).toHaveBeenCalledWith({ viewMode: 'split' })
+    expect(await within(editorRoot() as unknown as HTMLElement).findByRole('textbox', { name: 'Find' })).toBeInTheDocument()
+  })
+})
+
+describe('undo and redo from the Edit menu', () => {
+  it('apply to the editor history', async () => {
+    await openFirstFileAndEdit()
+    mock.sendMenuCommand('undo')
+    expect(editorText()).toBe('# First')
+    mock.sendMenuCommand('redo')
+    expect(editorText()).toBe('# First edited')
+  })
+
+  it('do not undo past the opened file', async () => {
+    await openFirstFileAndEdit()
+    mock.sendMenuCommand('undo')
+    mock.sendMenuCommand('undo')
+    expect(editorText()).toBe('# First')
+  })
+})
+
+describe('new documents', () => {
+  it('starts an empty document after settling unsaved changes', async () => {
+    await openFirstFileAndEdit()
+    mock.api.confirmUnsaved.mockResolvedValue('discard')
+    mock.sendMenuCommand('new-file')
+    await waitFor(() => expect(editorText()).toBe(''))
+    expect(screen.getByText('Untitled')).toBeInTheDocument()
+    expect(mock.api.watchDocument).toHaveBeenLastCalledWith(null)
+  })
+})
+
+describe('changes made by other programs', () => {
+  async function openFirstFile() {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Open Folder…' }))
+    await user.click(await screen.findByRole('button', { name: 'first.md' }))
+    await waitFor(() => expect(editorText()).toBe('# First'))
+    expect(mock.api.watchDocument).toHaveBeenLastCalledWith('/notes/first.md')
+  }
+
+  it('reloads silently when there are no unsaved edits', async () => {
+    await openFirstFile()
+    mock.api.readFile.mockResolvedValue('# Changed elsewhere')
+    mock.changeDocumentOnDisk('/notes/first.md')
+    await waitFor(() => expect(editorText()).toBe('# Changed elsewhere'))
+    expect(mock.api.confirmReload).not.toHaveBeenCalled()
+    expect(screen.getByText('Saved')).toBeInTheDocument()
+  })
+
+  it('ignores the echo of its own save', async () => {
+    await openFirstFileAndEdit()
+    mock.sendMenuCommand('save')
+    await waitFor(() => expect(screen.getByText('Saved')).toBeInTheDocument())
+    mock.api.readFile.mockResolvedValue('# First edited')
+    mock.changeDocumentOnDisk('/notes/first.md')
+    await waitFor(() => expect(mock.api.readFile).toHaveBeenLastCalledWith('/notes/first.md'))
+    expect(mock.api.confirmReload).not.toHaveBeenCalled()
+    expect(editorText()).toBe('# First edited')
+  })
+
+  it('asks when there are unsaved edits, and keeps them if the user says so', async () => {
+    await openFirstFileAndEdit()
+    mock.api.readFile.mockResolvedValue('# Theirs')
+    mock.api.confirmReload.mockResolvedValue('keep')
+    mock.changeDocumentOnDisk('/notes/first.md')
+    await waitFor(() => expect(mock.api.confirmReload).toHaveBeenCalledWith('first.md'))
+    expect(editorText()).toBe('# First edited')
+    expect(screen.getByText('Unsaved')).toBeInTheDocument()
+  })
+
+  it('reloads over unsaved edits when the user chooses Reload', async () => {
+    await openFirstFileAndEdit()
+    mock.api.readFile.mockResolvedValue('# Theirs')
+    mock.api.confirmReload.mockResolvedValue('reload')
+    mock.changeDocumentOnDisk('/notes/first.md')
+    await waitFor(() => expect(editorText()).toBe('# Theirs'))
+    expect(screen.getByText('Saved')).toBeInTheDocument()
+  })
+
+  it('marks a deleted file as unsaved', async () => {
+    await openFirstFile()
+    mock.api.readFile.mockRejectedValue(new Error('ENOENT'))
+    mock.changeDocumentOnDisk('/notes/first.md')
+    expect(await screen.findByRole('alert')).toHaveTextContent('first.md was deleted or moved')
+    expect(screen.getByText('Unsaved')).toBeInTheDocument()
+  })
+
+  it('refreshes the sidebar when files are added or removed', async () => {
+    await openFirstFile()
+    mock.api.listMarkdownFiles.mockResolvedValue([
+      ...folder.tree,
+      { kind: 'file', name: 'third.md', path: '/notes/third.md' },
+    ])
+    mock.changeTree()
+    expect(await screen.findByRole('button', { name: 'third.md' })).toBeInTheDocument()
+  })
+
+  it('shows a folder opened from Open Recent', () => {
+    render(<App />)
+    mock.openFolderFromMenu({ rootPath: '/recent', tree: [{ kind: 'file', name: 'r.md', path: '/recent/r.md' }] })
+    expect(screen.getByText('recent')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'r.md' })).toBeInTheDocument()
   })
 })

@@ -1,20 +1,41 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
-import type { MenuCommand, OpenedFolder } from '../../shared/api'
-import { Editor } from './components/Editor'
+import {
+  DEFAULT_UI_SETTINGS,
+  EDITOR_FRACTION_RANGE,
+  SIDEBAR_WIDTH_RANGE,
+  type MenuCommand,
+  type OpenedFolder,
+  type ThemeSetting,
+  type UiSettings,
+} from '../../shared/api'
+import { Editor, type EditorHandle } from './components/Editor'
 import { Preview } from './components/Preview'
 import { Sidebar } from './components/Sidebar'
+import { Splitter } from './components/Splitter'
 import { StatusBar } from './components/StatusBar'
+import { decideExternalChange } from './externalChange'
 import { countWords, errorMessage, fileName } from './text'
 
 interface DocumentState {
   /** Null for a new document that has never been saved. */
   path: string | null
   content: string
-  /** The content as it is on disk; the document is dirty when `content` differs. */
-  savedContent: string
+  /**
+   * The content as it is on disk; the document is dirty when `content`
+   * differs. Null when the file was deleted or moved away by another program.
+   */
+  savedContent: string | null
+  /** Identifies one loaded document; the editor starts a fresh undo history when it changes. */
+  key: number
 }
 
-const NEW_DOCUMENT: DocumentState = { path: null, content: '', savedContent: '' }
+let nextDocumentKey = 1
+
+function loadedDocument(path: string | null, content: string): DocumentState {
+  return { path, content, savedContent: content, key: nextDocumentKey++ }
+}
+
+const NEW_DOCUMENT: DocumentState = { path: null, content: '', savedContent: '', key: 0 }
 
 function isDirty(document: DocumentState): boolean {
   return document.content !== document.savedContent
@@ -24,16 +45,28 @@ function documentName(document: DocumentState): string {
   return document.path ? fileName(document.path) : 'Untitled'
 }
 
+const SPLITTER_WIDTH = 5
+const NEXT_THEME: Record<ThemeSetting, ThemeSetting> = { system: 'light', light: 'dark', dark: 'system' }
+
 export function App() {
   const api = window.mdpad
   const [folder, setFolder] = useState<OpenedFolder | null>(null)
   const [doc, setDoc] = useState<DocumentState>(NEW_DOCUMENT)
   const [message, setMessage] = useState<string | null>(null)
+  const [settings, setSettings] = useState<UiSettings>(DEFAULT_UI_SETTINGS)
   // Native dialogs are modal, but async work around them is not: run one flow at a time.
   const busy = useRef(false)
+  const latestDoc = useRef(doc)
+  const editor = useRef<EditorHandle>(null)
+  const workspace = useRef<HTMLDivElement>(null)
+  const externalCheck = useRef({ running: false, again: false })
 
   const dirty = isDirty(doc)
   const name = documentName(doc)
+
+  useEffect(() => {
+    latestDoc.current = doc
+  }, [doc])
 
   useEffect(() => {
     api.setDocumentDirty(dirty)
@@ -42,6 +75,30 @@ export function App() {
   useEffect(() => {
     document.title = `${dirty ? '● ' : ''}${name} — mdpad`
   }, [dirty, name])
+
+  useEffect(() => {
+    let cancelled = false
+    api.getSettings().then(
+      (loaded) => {
+        if (!cancelled) setSettings(loaded)
+      },
+      () => undefined,
+    )
+    const unsubscribe = api.onSettingsChanged(setSettings)
+    return () => {
+      cancelled = true
+      unsubscribe()
+    }
+  }, [api])
+
+  useEffect(() => {
+    api.watchDocument(doc.path).catch((error: unknown) => setMessage(errorMessage(error)))
+  }, [api, doc.path])
+
+  function updateSettings(patch: Partial<UiSettings>): void {
+    setSettings((current) => ({ ...current, ...patch }))
+    api.updateSettings(patch)
+  }
 
   async function exclusive(task: () => Promise<void>): Promise<void> {
     if (busy.current) return
@@ -92,7 +149,7 @@ export function App() {
       if (path === doc.path) return
       if (!(await settleUnsavedChanges(doc))) return
       const content = await api.readFile(path)
-      setDoc({ path, content, savedContent: content })
+      setDoc(loadedDocument(path, content))
     })
   }
 
@@ -101,7 +158,7 @@ export function App() {
       const opened = await api.openFile()
       if (!opened) return
       if (!(await settleUnsavedChanges(doc))) return
-      setDoc({ path: opened.path, content: opened.content, savedContent: opened.content })
+      setDoc(loadedDocument(opened.path, opened.content))
     })
   }
 
@@ -112,8 +169,96 @@ export function App() {
     })
   }
 
+  function newDocument(): Promise<void> {
+    return exclusive(async () => {
+      if (!(await settleUnsavedChanges(doc))) return
+      setDoc(loadedDocument(null, ''))
+      editor.current?.focus()
+    })
+  }
+
+  function runHistory(command: 'undo' | 'redo'): void {
+    const active = document.activeElement
+    const inOtherField = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement
+    if (!inOtherField && editor.current?.runHistory(command)) return
+    // A plain text field (such as the editor's search box) keeps its own history.
+    document.execCommand(command)
+  }
+
+  function find(): void {
+    if (settings.viewMode === 'preview') updateSettings({ viewMode: 'split' })
+    // Let the editor become visible before its search panel takes focus.
+    setTimeout(() => editor.current?.openSearch(), 0)
+  }
+
+  /** Brings the document in line with a file that another program changed. */
+  async function reconcileWithDisk(path: string): Promise<void> {
+    if (latestDoc.current.path !== path) return
+    let disk: string | null
+    try {
+      disk = await api.readFile(path)
+    } catch {
+      disk = null
+    }
+    const current = latestDoc.current
+    if (current.path !== path) return
+    const name = documentName(current)
+
+    switch (decideExternalChange(current, disk)) {
+      case 'ignore':
+        return
+      case 'missing':
+        setDoc((latest) => (latest.path === path ? { ...latest, savedContent: null } : latest))
+        setMessage(`${name} was deleted or moved by another program. Save to write it again.`)
+        return
+      case 'mark-saved':
+      case 'reload':
+        // Re-check against the newest state: typing may have started in the meantime.
+        setDoc((latest) => {
+          if (latest.path !== path || disk === null) return latest
+          if (latest.content === disk) return { ...latest, savedContent: disk }
+          if (isDirty(latest)) return latest
+          return { ...latest, content: disk, savedContent: disk }
+        })
+        return
+      case 'ask': {
+        const choice = await api.confirmReload(name)
+        setDoc((latest) => {
+          if (latest.path !== path || disk === null) return latest
+          return choice === 'reload'
+            ? { ...latest, content: disk, savedContent: disk }
+            : // Keep the user's text; it stays unsaved against the new disk content.
+              { ...latest, savedContent: disk }
+        })
+        return
+      }
+    }
+  }
+
+  /** Runs one disk check at a time; a change that arrives during a check triggers one more. */
+  async function checkExternalChange(path: string): Promise<void> {
+    const state = externalCheck.current
+    if (state.running) {
+      state.again = true
+      return
+    }
+    state.running = true
+    try {
+      do {
+        state.again = false
+        await reconcileWithDisk(path)
+      } while (state.again)
+    } catch (error) {
+      setMessage(errorMessage(error))
+    } finally {
+      state.running = false
+    }
+  }
+
   const onMenuCommand = useEffectEvent((command: MenuCommand) => {
     switch (command) {
+      case 'new-file':
+        return void newDocument()
       case 'open-file':
         return void openFileDialog()
       case 'open-folder':
@@ -122,6 +267,11 @@ export function App() {
         return void exclusive(async () => void (await save(doc)))
       case 'save-as':
         return void exclusive(async () => void (await saveAs(doc)))
+      case 'undo':
+      case 'redo':
+        return runHistory(command)
+      case 'find':
+        return find()
     }
   })
 
@@ -131,21 +281,84 @@ export function App() {
     })
   })
 
+  const onDocumentChanged = useEffectEvent((path: string) => void checkExternalChange(path))
+  const onTreeChanged = useEffectEvent(() => void refreshTree().catch(() => undefined))
+
   useEffect(() => api.onMenuCommand((command) => onMenuCommand(command)), [api])
   useEffect(() => api.onCloseRequested(() => onCloseRequested()), [api])
+  useEffect(() => api.onFolderOpened((opened) => setFolder(opened)), [api])
+  useEffect(() => api.onDocumentChanged((path) => onDocumentChanged(path)), [api])
+  useEffect(() => api.onTreeChanged(() => onTreeChanged()), [api])
+
+  const { viewMode, sidebarWidth, editorFraction } = settings
+  const showEditor = viewMode !== 'preview'
+  const showPreview = viewMode !== 'editor'
+  const columns =
+    viewMode === 'split'
+      ? `${sidebarWidth}px ${SPLITTER_WIDTH}px minmax(0, ${editorFraction}fr) ${SPLITTER_WIDTH}px minmax(0, ${1 - editorFraction}fr)`
+      : `${sidebarWidth}px ${SPLITTER_WIDTH}px minmax(0, 1fr)`
+
+  function panesWidth(): number {
+    const total = workspace.current?.clientWidth ?? 0
+    return Math.max(1, total - sidebarWidth - 2 * SPLITTER_WIDTH)
+  }
 
   return (
     <div className="app">
-      <Sidebar
-        folder={folder}
-        activePath={doc.path}
+      <div className="workspace" ref={workspace} style={{ gridTemplateColumns: columns }}>
+        <Sidebar
+          folder={folder}
+          activePath={doc.path}
+          dirty={dirty}
+          onSelectFile={(path) => void openPath(path)}
+          onOpenFolder={() => void openFolderDialog()}
+        />
+        <Splitter
+          label="Resize sidebar"
+          value={sidebarWidth}
+          min={SIDEBAR_WIDTH_RANGE.min}
+          max={SIDEBAR_WIDTH_RANGE.max}
+          step={16}
+          valueForDrag={(start, deltaX) => start + deltaX}
+          onChange={(value) => setSettings((current) => ({ ...current, sidebarWidth: value }))}
+          onCommit={(value) => updateSettings({ sidebarWidth: value })}
+        />
+        <Editor
+          ref={editor}
+          value={doc.content}
+          documentKey={doc.key}
+          hidden={!showEditor}
+          onChange={(content) => setDoc((current) => ({ ...current, content }))}
+        />
+        {viewMode === 'split' && (
+          <Splitter
+            label="Resize editor and preview"
+            value={editorFraction}
+            min={EDITOR_FRACTION_RANGE.min}
+            max={EDITOR_FRACTION_RANGE.max}
+            step={0.05}
+            valueForDrag={(start, deltaX) => start + deltaX / panesWidth()}
+            onChange={(value) => setSettings((current) => ({ ...current, editorFraction: value }))}
+            onCommit={(value) => updateSettings({ editorFraction: value })}
+          />
+        )}
+        <Preview
+          markdown={doc.content}
+          documentKey={doc.key}
+          documentPath={doc.path}
+          folderPath={folder?.rootPath ?? null}
+          hidden={!showPreview}
+          onOpenDocument={(path) => void openPath(path)}
+        />
+      </div>
+      <StatusBar
+        path={doc.path}
         dirty={dirty}
-        onSelectFile={(path) => void openPath(path)}
-        onOpenFolder={() => void openFolderDialog()}
+        wordCount={countWords(doc.content)}
+        message={message}
+        theme={settings.theme}
+        onCycleTheme={() => updateSettings({ theme: NEXT_THEME[settings.theme] })}
       />
-      <Editor value={doc.content} onChange={(content) => setDoc((current) => ({ ...current, content }))} />
-      <Preview />
-      <StatusBar path={doc.path} dirty={dirty} wordCount={countWords(doc.content)} message={message} />
     </div>
   )
 }
