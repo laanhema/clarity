@@ -1,26 +1,205 @@
-import type { Mermaid } from 'mermaid'
-import { THEME_SETTINGS, type ThemeSetting } from '../../../shared/api'
+import type { Mermaid, MermaidConfig } from 'mermaid'
+import { FONT_SETTINGS, THEME_SETTINGS, type FontSetting, type ThemeSetting } from '../../../shared/api'
 
-/** Mermaid's light or dark diagram theme. */
-export type DiagramTheme = 'default' | 'dark'
+/** The diagram palette in use: one per app theme, with "system" resolved to light or dark. */
+export type DiagramStyle = 'light' | 'dark' | 'gruvbox-material-dark-hard' | 'tokyo-night-moon'
 
 /** Reads the app theme from the `data-theme` value App puts on the root element; anything else counts as "system". */
 export function parseThemeSetting(value: string | undefined): ThemeSetting {
   return THEME_SETTINGS.find((theme) => theme === value) ?? 'system'
 }
 
-/** The diagram theme for an app theme: light for the light theme, dark for every dark-family theme. */
-export function diagramTheme(theme: ThemeSetting, systemDark: boolean): DiagramTheme {
-  switch (theme) {
-    case 'light':
-      return 'default'
-    case 'system':
-      return systemDark ? 'dark' : 'default'
-    case 'dark':
-    case 'gruvbox-material-dark-hard':
-    case 'tokyo-night-moon':
-      return 'dark'
+/** Reads the app font from the `data-font` value App puts on the root element; anything else counts as Commit Mono. */
+export function parseFontSetting(value: string | undefined): FontSetting {
+  return FONT_SETTINGS.find((font) => font === value) ?? 'commit-mono'
+}
+
+/** The diagram palette for an app theme. "System" follows the system colour scheme. */
+export function diagramStyle(theme: ThemeSetting, systemDark: boolean): DiagramStyle {
+  return theme === 'system' ? (systemDark ? 'dark' : 'light') : theme
+}
+
+/** The font stack of each Font setting, as `--font-app` in styles.css has it. */
+export const FONT_STACKS: Record<FontSetting, string> = {
+  'commit-mono': "'Commit Mono', ui-monospace, monospace",
+  'jetbrains-mono-nl': "'JetBrains Mono NL', ui-monospace, monospace",
+}
+
+/** Mermaid theme variables: colours, plus `darkMode` for the colours Mermaid derives from them. */
+type Palette = Record<string, string | boolean>
+
+/**
+ * Mermaid `base` theme colours for each app theme, taken from that theme's
+ * block in styles.css: node fills, borders and text, lines, subgraphs,
+ * notes and sequence-diagram actors.
+ */
+export const PALETTES: Record<DiagramStyle, Palette> = {
+  light: {
+    darkMode: false,
+    background: '#ffffff',
+    primaryColor: '#eef3fd',
+    primaryBorderColor: '#2e6be6',
+    primaryTextColor: '#1f2328',
+    secondaryColor: '#f6f8fa',
+    secondaryBorderColor: '#d8dce1',
+    secondaryTextColor: '#1f2328',
+    tertiaryColor: '#f5f6f8',
+    tertiaryBorderColor: '#d8dce1',
+    tertiaryTextColor: '#1f2328',
+    lineColor: '#656d76',
+    textColor: '#1f2328',
+    titleColor: '#0b4fa8',
+    clusterBkg: '#f6f8fa',
+    clusterBorder: '#d8dce1',
+    edgeLabelBackground: '#ffffff',
+    noteBkgColor: '#fdf3e7',
+    noteBorderColor: '#d4740b',
+    noteTextColor: '#1f2328',
+    actorBkg: '#eef3fd',
+    actorBorder: '#2e6be6',
+    actorTextColor: '#1f2328',
+    actorLineColor: '#8c959f',
+    signalColor: '#1f2328',
+    signalTextColor: '#1f2328',
+    labelBoxBkgColor: '#eef3fd',
+    labelBoxBorderColor: '#2e6be6',
+    labelTextColor: '#1f2328',
+    loopTextColor: '#1f2328',
+    activationBkgColor: '#f6f8fa',
+    activationBorderColor: '#2e6be6',
+  },
+  dark: {
+    darkMode: true,
+    background: '#1e1f22',
+    primaryColor: '#2a3243',
+    primaryBorderColor: '#6e9eff',
+    primaryTextColor: '#e3e5e8',
+    secondaryColor: '#26282c',
+    secondaryBorderColor: '#303236',
+    secondaryTextColor: '#e3e5e8',
+    tertiaryColor: '#26282c',
+    tertiaryBorderColor: '#303236',
+    tertiaryTextColor: '#e3e5e8',
+    lineColor: '#9aa0a6',
+    textColor: '#e3e5e8',
+    titleColor: '#8cb4ff',
+    clusterBkg: '#232427',
+    clusterBorder: '#3a3d42',
+    edgeLabelBackground: '#1e1f22',
+    noteBkgColor: '#3a2f22',
+    noteBorderColor: '#f0a64a',
+    noteTextColor: '#e3e5e8',
+    actorBkg: '#2a3243',
+    actorBorder: '#6e9eff',
+    actorTextColor: '#e3e5e8',
+    actorLineColor: '#6e7681',
+    signalColor: '#e3e5e8',
+    signalTextColor: '#e3e5e8',
+    labelBoxBkgColor: '#2a3243',
+    labelBoxBorderColor: '#6e9eff',
+    labelTextColor: '#e3e5e8',
+    loopTextColor: '#e3e5e8',
+    activationBkgColor: '#26282c',
+    activationBorderColor: '#6e9eff',
+  },
+  'gruvbox-material-dark-hard': {
+    darkMode: true,
+    background: '#1d2021',
+    primaryColor: '#32302f',
+    primaryBorderColor: '#e78a4e',
+    primaryTextColor: '#d4be98',
+    secondaryColor: '#3c3836',
+    secondaryBorderColor: '#a9b665',
+    secondaryTextColor: '#d4be98',
+    tertiaryColor: '#282828',
+    tertiaryBorderColor: '#504945',
+    tertiaryTextColor: '#d4be98',
+    lineColor: '#a89984',
+    textColor: '#d4be98',
+    titleColor: '#e78a4e',
+    clusterBkg: '#282828',
+    clusterBorder: '#504945',
+    edgeLabelBackground: '#1d2021',
+    noteBkgColor: '#473c29',
+    noteBorderColor: '#d8a657',
+    noteTextColor: '#ddc7a1',
+    actorBkg: '#32302f',
+    actorBorder: '#7daea3',
+    actorTextColor: '#d4be98',
+    actorLineColor: '#7c6f64',
+    signalColor: '#d4be98',
+    signalTextColor: '#d4be98',
+    labelBoxBkgColor: '#32302f',
+    labelBoxBorderColor: '#7daea3',
+    labelTextColor: '#d4be98',
+    loopTextColor: '#d4be98',
+    activationBkgColor: '#3c3836',
+    activationBorderColor: '#e78a4e',
+  },
+  'tokyo-night-moon': {
+    darkMode: true,
+    background: '#222436',
+    primaryColor: '#2f334d',
+    primaryBorderColor: '#82aaff',
+    primaryTextColor: '#c8d3f5',
+    secondaryColor: '#2d3f76',
+    secondaryBorderColor: '#4fd6be',
+    secondaryTextColor: '#c8d3f5',
+    tertiaryColor: '#1e2030',
+    tertiaryBorderColor: '#3b4261',
+    tertiaryTextColor: '#c8d3f5',
+    lineColor: '#828bb8',
+    textColor: '#c8d3f5',
+    titleColor: '#82aaff',
+    clusterBkg: '#1e2030',
+    clusterBorder: '#3b4261',
+    edgeLabelBackground: '#222436',
+    noteBkgColor: '#3a3446',
+    noteBorderColor: '#ff966c',
+    noteTextColor: '#c8d3f5',
+    actorBkg: '#2f334d',
+    actorBorder: '#4fd6be',
+    actorTextColor: '#c8d3f5',
+    actorLineColor: '#636da6',
+    signalColor: '#c8d3f5',
+    signalTextColor: '#c8d3f5',
+    labelBoxBkgColor: '#2f334d',
+    labelBoxBorderColor: '#4fd6be',
+    labelTextColor: '#c8d3f5',
+    loopTextColor: '#c8d3f5',
+    activationBkgColor: '#2d3f76',
+    activationBorderColor: '#82aaff',
+  },
+}
+
+/**
+ * The `mermaid.initialize` config for a diagram palette and app font. The
+ * look and layout are set explicitly so a change of Mermaid's defaults
+ * cannot move them. The font goes in both places, because Mermaid measures
+ * labels with one and draws them with the other.
+ */
+export function mermaidConfig(style: DiagramStyle, font: FontSetting): MermaidConfig {
+  const fontFamily = FONT_STACKS[font]
+  return {
+    startOnLoad: false,
+    securityLevel: 'strict',
+    theme: 'base',
+    look: 'classic',
+    layout: 'elk',
+    fontFamily,
+    themeVariables: { ...PALETTES[style], fontFamily },
+    // Errors show in the preview's own markup, not as Mermaid's error diagram.
+    suppressErrorRendering: true,
+    // A diagram's `%%{init}%%` block may not inject CSS or change the font.
+    secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'maxEdges', 'themeCSS', 'fontFamily'],
   }
+}
+
+/** Waits for the app font's regular and bold faces, since Mermaid sizes boxes by measuring labels in it. */
+async function loadFont(font: FontSetting): Promise<void> {
+  if (typeof document.fonts === 'undefined') return
+  const stack = FONT_STACKS[font]
+  await Promise.all([document.fonts.load(`16px ${stack}`), document.fonts.load(`bold 16px ${stack}`)]).catch(() => undefined)
 }
 
 /** A rendered diagram: the cleaned SVG element and the CSS that Mermaid put in its `<style>`. */
@@ -93,7 +272,7 @@ export function applyInlineStyles(root: ParentNode): void {
  */
 const RENDER_ID = 'lantern-mermaid'
 
-/** Mermaid's CSS by theme, diagram type and `%%{init}%%` config, from the last render of that kind. */
+/** Mermaid's CSS by palette, font, diagram type and `%%{init}%%` config, from the last render of that kind. */
 const cssByKind = new Map<string, string>()
 
 /**
@@ -124,24 +303,16 @@ async function renderOnce(mermaid: Mermaid, source: string, css: string | undefi
 let queue: Promise<unknown> = Promise.resolve()
 
 /**
- * Renders a diagram with the given Mermaid theme. Renders run one at a time,
- * because Mermaid's configuration is global. Rejects with Mermaid's message
- * for a diagram it cannot parse.
+ * Renders a diagram in the given palette and app font. Renders run one at a
+ * time, because Mermaid's configuration is global. Rejects with Mermaid's
+ * message for a diagram it cannot parse.
  */
-export function renderMermaid(source: string, theme: DiagramTheme): Promise<MermaidDiagram> {
+export function renderMermaid(source: string, style: DiagramStyle, font: FontSetting): Promise<MermaidDiagram> {
   const run = async () => {
-    const mermaid = await loadMermaid()
-    mermaid.initialize({
-      startOnLoad: false,
-      securityLevel: 'strict',
-      theme,
-      // Errors show in the preview's own markup, not as Mermaid's error diagram.
-      suppressErrorRendering: true,
-      // A diagram's `%%{init}%%` block may not inject CSS or change the font.
-      secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'maxEdges', 'themeCSS', 'fontFamily'],
-    })
+    const [mermaid] = await Promise.all([loadMermaid(), loadFont(font)])
+    mermaid.initialize(mermaidConfig(style, font))
     const { diagramType, config } = await mermaid.parse(source)
-    const kind = JSON.stringify([theme, diagramType, config])
+    const kind = JSON.stringify([style, font, diagramType, config])
     const known = cssByKind.get(kind)
     const diagram = await renderOnce(mermaid, source, known)
     if (diagram.css === known) return diagram

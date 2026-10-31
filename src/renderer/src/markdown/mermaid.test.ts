@@ -1,6 +1,25 @@
-import { describe, expect, it } from 'vitest'
+import mermaid from 'mermaid'
+import { describe, expect, it, vi } from 'vitest'
 import { THEME_SETTINGS } from '../../../shared/api'
-import { applyInlineStyles, diagramTheme, parseMermaidSvg, parseThemeSetting } from './mermaid'
+import {
+  applyInlineStyles,
+  diagramStyle,
+  FONT_STACKS,
+  mermaidConfig,
+  PALETTES,
+  parseFontSetting,
+  parseMermaidSvg,
+  parseThemeSetting,
+  renderMermaid,
+} from './mermaid'
+
+vi.mock('mermaid', () => ({
+  default: {
+    initialize: vi.fn(),
+    parse: vi.fn(() => Promise.resolve({ diagramType: 'flowchart-v2', config: {} })),
+    render: vi.fn(() => Promise.resolve({ svg: '<svg><style>svg{fill:red}</style></svg>' })),
+  },
+}))
 
 const SVG = `<svg id="lantern-mermaid-1" xmlns="http://www.w3.org/2000/svg" style="max-width: 200px;" onload="alert(1)">
 <style>#lantern-mermaid-1{fill:#333;}</style>
@@ -50,22 +69,79 @@ describe('applyInlineStyles', () => {
   })
 })
 
-describe('diagramTheme', () => {
-  it('is light only for the light theme, or for "system" in light mode', () => {
-    const themes = (systemDark: boolean) => THEME_SETTINGS.map((theme) => [theme, diagramTheme(theme, systemDark)])
-    expect(themes(false)).toEqual([
-      ['system', 'default'],
-      ['light', 'default'],
+describe('diagramStyle', () => {
+  it('gives each app theme its own palette, and "system" the light or dark one', () => {
+    const styles = (systemDark: boolean) => THEME_SETTINGS.map((theme) => [theme, diagramStyle(theme, systemDark)])
+    expect(styles(false)).toEqual([
+      ['system', 'light'],
+      ['light', 'light'],
       ['dark', 'dark'],
-      ['gruvbox-material-dark-hard', 'dark'],
-      ['tokyo-night-moon', 'dark'],
+      ['gruvbox-material-dark-hard', 'gruvbox-material-dark-hard'],
+      ['tokyo-night-moon', 'tokyo-night-moon'],
     ])
-    expect(themes(true).filter(([, diagram]) => diagram !== 'dark')).toEqual([['light', 'default']])
+    expect(diagramStyle('system', true)).toBe('dark')
   })
 
   it('reads the root element\'s theme, falling back to "system"', () => {
     expect(parseThemeSetting('tokyo-night-moon')).toBe('tokyo-night-moon')
     expect(parseThemeSetting(undefined)).toBe('system')
     expect(parseThemeSetting('no-such-theme')).toBe('system')
+  })
+
+  it("reads the root element's font, falling back to Commit Mono", () => {
+    expect(parseFontSetting('jetbrains-mono-nl')).toBe('jetbrains-mono-nl')
+    expect(parseFontSetting(undefined)).toBe('commit-mono')
+    expect(parseFontSetting('no-such-font')).toBe('commit-mono')
+  })
+})
+
+describe('mermaidConfig', () => {
+  it("maps each app theme to its palette, in that theme's page colour and accent", () => {
+    const palette = (theme: (typeof THEME_SETTINGS)[number]) => {
+      const variables = mermaidConfig(diagramStyle(theme, false), 'commit-mono').themeVariables as Record<string, unknown>
+      return [variables['background'], variables['primaryBorderColor'], variables['darkMode']]
+    }
+    expect(palette('light')).toEqual(['#ffffff', '#2e6be6', false])
+    expect(palette('dark')).toEqual(['#1e1f22', '#6e9eff', true])
+    expect(palette('gruvbox-material-dark-hard')).toEqual(['#1d2021', '#e78a4e', true])
+    expect(palette('tokyo-night-moon')).toEqual(['#222436', '#82aaff', true])
+  })
+
+  it('uses the base theme, classic look, ELK layout and app font, with no corner CSS', () => {
+    const config = mermaidConfig('gruvbox-material-dark-hard', 'jetbrains-mono-nl')
+    expect(config).toMatchObject({
+      theme: 'base',
+      look: 'classic',
+      layout: 'elk',
+      fontFamily: FONT_STACKS['jetbrains-mono-nl'],
+      themeVariables: {
+        ...PALETTES['gruvbox-material-dark-hard'],
+        fontFamily: FONT_STACKS['jetbrains-mono-nl'],
+      },
+      securityLevel: 'strict',
+    })
+    expect(config).not.toHaveProperty('themeCSS')
+    expect(config.secure).toEqual(expect.arrayContaining(['themeCSS', 'fontFamily', 'securityLevel']))
+  })
+})
+
+describe('renderMermaid', () => {
+  it('initializes Mermaid with the palette and font it is given', async () => {
+    // jsdom has no constructed stylesheets.
+    vi.stubGlobal(
+      'CSSStyleSheet',
+      class {
+        replaceSync = vi.fn()
+      },
+    )
+    Object.defineProperty(document, 'adoptedStyleSheets', {
+      value: [],
+      writable: true,
+      configurable: true,
+    })
+    const { css } = await renderMermaid('graph TD; A-->B', 'tokyo-night-moon', 'commit-mono')
+    expect(css).toBe('svg{fill:red}')
+    expect(mermaid.initialize).toHaveBeenLastCalledWith(mermaidConfig('tokyo-night-moon', 'commit-mono'))
+    vi.unstubAllGlobals()
   })
 })

@@ -19,17 +19,27 @@ describe('MermaidDiagram', () => {
     renderMermaidMock.mockReturnValue(new Promise(() => undefined))
     render(<MermaidDiagram source="graph TD; A-->B" />)
     expect(screen.getByText('graph TD; A-->B')).toBeInTheDocument()
-    expect(renderMermaidMock).toHaveBeenCalledWith('graph TD; A-->B', 'default')
+    expect(renderMermaidMock).toHaveBeenCalledWith('graph TD; A-->B', 'light', 'commit-mono')
   })
 
-  it('renders again with the dark theme when the app switches to a dark-family theme', async () => {
+  it("renders again in the new theme's palette when the app theme changes", async () => {
     renderMermaidMock.mockReturnValue(new Promise(() => undefined))
     render(<MermaidDiagram source="graph TD; A-->B" />)
     act(() => {
       document.documentElement.dataset['theme'] = 'tokyo-night-moon'
     })
-    await waitFor(() => expect(renderMermaidMock).toHaveBeenLastCalledWith('graph TD; A-->B', 'dark'))
+    await waitFor(() => expect(renderMermaidMock).toHaveBeenLastCalledWith('graph TD; A-->B', 'tokyo-night-moon', 'commit-mono'))
     delete document.documentElement.dataset['theme']
+  })
+
+  it('renders again in the new font when the Font setting changes', async () => {
+    renderMermaidMock.mockReturnValue(new Promise(() => undefined))
+    render(<MermaidDiagram source="graph TD; A-->B" />)
+    act(() => {
+      document.documentElement.dataset['font'] = 'jetbrains-mono-nl'
+    })
+    await waitFor(() => expect(renderMermaidMock).toHaveBeenLastCalledWith('graph TD; A-->B', 'light', 'jetbrains-mono-nl'))
+    delete document.documentElement.dataset['font']
   })
 
   it('shows the error in place of a diagram that fails', async () => {

@@ -1,10 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import type { FontSetting } from '../../../shared/api'
 import {
   applyInlineStyles,
-  diagramTheme,
+  diagramStyle,
+  parseFontSetting,
   parseThemeSetting,
   renderMermaid,
-  type DiagramTheme,
+  type DiagramStyle,
   type MermaidDiagram as Diagram,
 } from '../markdown/mermaid'
 
@@ -14,10 +16,13 @@ function systemPrefersDark(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia(DARK_QUERY).matches
 }
 
-/** Calls `onChange` when the app theme (the root's `data-theme`) or the system colour scheme changes. */
-function subscribeToTheme(onChange: () => void): () => void {
+/** Calls `onChange` when the app theme or font (the root's `data-theme` and `data-font`) or the system colour scheme changes. */
+function subscribeToAppearance(onChange: () => void): () => void {
   const observer = new MutationObserver(onChange)
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme', 'data-font'],
+  })
   const query = typeof window.matchMedia === 'function' ? window.matchMedia(DARK_QUERY) : null
   query?.addEventListener('change', onChange)
   return () => {
@@ -26,12 +31,21 @@ function subscribeToTheme(onChange: () => void): () => void {
   }
 }
 
-/** The Mermaid theme that matches the app theme, updated when either changes. */
-function useDiagramTheme(): DiagramTheme {
+/** The diagram palette that matches the app theme, updated when the theme or system colour scheme changes. */
+function useDiagramStyle(): DiagramStyle {
   return useSyncExternalStore(
-    subscribeToTheme,
-    () => diagramTheme(parseThemeSetting(document.documentElement.dataset['theme']), systemPrefersDark()),
-    () => 'default',
+    subscribeToAppearance,
+    () => diagramStyle(parseThemeSetting(document.documentElement.dataset['theme']), systemPrefersDark()),
+    () => 'light',
+  )
+}
+
+/** The app font, updated when the Font setting changes. */
+function useAppFont(): FontSetting {
+  return useSyncExternalStore(
+    subscribeToAppearance,
+    () => parseFontSetting(document.documentElement.dataset['font']),
+    () => 'commit-mono',
   )
 }
 
@@ -50,18 +64,20 @@ type Result = { diagram: Diagram; error?: undefined } | { diagram?: undefined; e
  * finishes; after that an edit keeps the old diagram up until the new one is
  * ready. A diagram that fails shows Mermaid's message in its place.
  *
- * The diagram follows the app theme and renders again when it changes.
+ * The diagram takes its colours from the app theme and its font from the
+ * Font setting, and renders again when either changes.
  * The SVG lives in a shadow root, so Mermaid's stylesheet (applied as a
  * constructed stylesheet, which the CSP allows) touches only this diagram.
  */
 export function MermaidDiagram({ source }: { source: string }) {
-  const theme = useDiagramTheme()
+  const style = useDiagramStyle()
+  const font = useAppFont()
   const [result, setResult] = useState<Result | null>(null)
   const hostRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     let cancelled = false
-    renderMermaid(source, theme).then(
+    renderMermaid(source, style, font).then(
       (diagram) => {
         if (!cancelled) setResult({ diagram })
       },
@@ -72,7 +88,7 @@ export function MermaidDiagram({ source }: { source: string }) {
     return () => {
       cancelled = true
     }
-  }, [source, theme])
+  }, [source, style, font])
 
   const diagram = result?.diagram
   useLayoutEffect(() => {
