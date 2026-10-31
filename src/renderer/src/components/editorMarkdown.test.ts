@@ -1,10 +1,12 @@
+import { insertNewlineContinueMarkup } from '@codemirror/lang-markdown'
+import { EditorState } from '@codemirror/state'
 import { highlightTree, tags, type Tag } from '@lezer/highlight'
 import { describe, expect, it } from 'vitest'
-import { listMark, markdownHighlight, markdownSupport } from './editorMarkdown'
+import { editorLanguage, listMark, markdownExtensions, markdownHighlight } from './editorMarkdown'
 
 /** Each highlighted stretch of `doc` with the class names it gets. */
 function highlight(doc: string): { text: string; classes: string }[] {
-  const tree = markdownSupport.language.parser.parse(doc)
+  const tree = editorLanguage.language.parser.parse(doc)
   const spans: { text: string; classes: string }[] = []
   highlightTree(tree, markdownHighlight, (from, to, classes) => spans.push({ text: doc.slice(from, to), classes }))
   return spans
@@ -38,5 +40,26 @@ describe('editor Markdown highlighting', () => {
     for (const [index, level] of levels.entries()) {
       expect(highlight(`${'#'.repeat(index + 1)} Title\n`)).toContainEqual({ text: ' Title', classes: classOf(level) })
     }
+  })
+
+  it('highlights frontmatter as YAML and the body as Markdown', () => {
+    const spans = highlight('---\nname: skill\ndescription: "Quoted"\n---\n\n# Title\n\n- item\n')
+    expect(spans).toContainEqual({ text: '---\n', classes: classOf(tags.meta) })
+    expect(spans).toContainEqual({ text: 'name', classes: classOf(tags.definition(tags.propertyName)) })
+    expect(spans).toContainEqual({ text: '"Quoted"', classes: classOf(tags.string) })
+    expect(spans).toContainEqual({ text: ' Title', classes: classOf(tags.heading1) })
+    expect(spans).toContainEqual({ text: '-', classes: classOf(listMark) })
+  })
+
+  it('does not treat a later --- block as frontmatter', () => {
+    const spans = highlight('Intro\n\n---\nname: x\n---\n')
+    expect(spans.some((span) => span.classes === classOf(tags.definition(tags.propertyName)))).toBe(false)
+  })
+
+  it('still continues Markdown lists on Enter after frontmatter', () => {
+    const doc = '---\na: b\n---\n\n- item'
+    let state = EditorState.create({ doc, selection: { anchor: doc.length }, extensions: markdownExtensions })
+    insertNewlineContinueMarkup({ state, dispatch: (transaction) => (state = transaction.state) })
+    expect(state.doc.toString()).toBe(`${doc}\n- `)
   })
 })

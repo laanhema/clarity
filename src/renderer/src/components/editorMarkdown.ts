@@ -1,4 +1,5 @@
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
+import { yamlFrontmatter } from '@codemirror/lang-yaml'
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import type { Extension } from '@codemirror/state'
 import { styleTags, Tag, tags } from '@lezer/highlight'
@@ -17,6 +18,12 @@ export const markdownSupport = markdown({
   base: markdownLanguage,
   extensions: [{ props: [styleTags({ ListMark: listMark })] }],
 })
+
+/**
+ * The editor's language: Markdown, with a YAML frontmatter block at the very
+ * start of the document (between `---` lines) highlighted as YAML.
+ */
+export const editorLanguage = yamlFrontmatter({ content: markdownSupport })
 
 /**
  * Markdown colours come from CSS variables, so they follow the theme. A theme
@@ -44,6 +51,12 @@ export const markdownHighlight = HighlightStyle.define([
   { tag: tags.quote, color: 'var(--md-quote, var(--fg-muted))', fontStyle: 'italic' },
   { tag: [tags.processingInstruction, tags.meta, tags.contentSeparator], color: 'var(--md-mark)' },
   { tag: listMark, color: 'var(--md-list, var(--md-mark))', fontWeight: 'var(--md-list-weight, normal)' },
+  // YAML frontmatter: keys like headings, quoted strings like code, punctuation like Markdown marks.
+  { tag: tags.definition(tags.propertyName), color: 'var(--md-heading)' },
+  { tag: [tags.string, tags.special(tags.string)], color: 'var(--md-code)' },
+  { tag: tags.lineComment, color: 'var(--fg-muted)', fontStyle: 'italic' },
+  { tag: [tags.separator, tags.punctuation, tags.squareBracket, tags.brace], color: 'var(--md-mark)' },
+  { tag: [tags.typeName, tags.labelName, tags.keyword], color: 'var(--md-link)' },
 ])
 
-export const markdownExtensions: Extension[] = [markdownSupport, syntaxHighlighting(markdownHighlight)]
+export const markdownExtensions: Extension[] = [editorLanguage, syntaxHighlighting(markdownHighlight)]

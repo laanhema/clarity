@@ -492,6 +492,50 @@ button {
   background: var(--bg-sidebar);
 }
 
+/* YAML frontmatter: a key/value table above the body, as on GitHub. */
+.markdown-body .frontmatter {
+  margin: 0 0 1.5em;
+  font-size: 0.9em;
+}
+
+.markdown-body .frontmatter table {
+  display: table;
+  width: 100%;
+  margin: 0;
+}
+
+.markdown-body .frontmatter th {
+  width: 1%;
+  color: var(--fg-muted);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.markdown-body .frontmatter :is(th, td) {
+  vertical-align: top;
+}
+
+/* Keep the line breaks of multi-line strings. */
+.markdown-body .frontmatter td {
+  white-space: pre-wrap;
+}
+
+.markdown-body .frontmatter td :is(table, ul) {
+  margin: 0;
+}
+
+.markdown-body .frontmatter td table tr {
+  background: transparent;
+}
+
+.markdown-body .frontmatter td ul {
+  padding-left: 1.2em;
+}
+
+.markdown-body .frontmatter pre {
+  margin: 0;
+}
+
 .markdown-body .footnotes {
   margin-top: 2em;
   padding-top: 1em;

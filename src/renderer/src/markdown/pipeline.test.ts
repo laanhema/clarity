@@ -164,3 +164,81 @@ describe('code highlighting', () => {
     expect(toHtml(tree)).not.toContain('style=')
   })
 })
+
+describe('YAML frontmatter', () => {
+  it('shows frontmatter as a key/value table, not a rule and a heading', () => {
+    const out = html('---\nname: ship-landing\ndescription: A long description of the skill.\n---\n\n# Title\n')
+    expect(out).toMatch(/^<div class="frontmatter"><table><tbody>/)
+    expect(out).toContain('<tr><th>name</th><td>ship-landing</td></tr>')
+    expect(out).toContain('<tr><th>description</th><td>A long description of the skill.</td></tr>')
+    expect(out).not.toContain('<hr>')
+    expect(out).not.toContain('<h2')
+    expect(out).toContain('<h1>Title</h1>')
+  })
+
+  it('shows nested mappings as tables and lists as lists', () => {
+    const out = html('---\nmetadata:\n  author: someone\n  version: 2\ntags:\n  - one\n  - two\nflag: true\nempty:\n---\n')
+    expect(out).toContain('<th>metadata</th><td><table><tbody><tr><th>author</th><td>someone</td></tr>')
+    expect(out).toContain('<tr><th>version</th><td>2</td></tr>')
+    expect(out).toContain('<th>tags</th><td><ul><li>one</li><li>two</li></ul></td>')
+    expect(out).toContain('<tr><th>flag</th><td>true</td></tr>')
+    expect(out).toContain('<tr><th>empty</th><td></td></tr>')
+    expect(out).not.toContain('{')
+  })
+
+  it('shows YAML that does not parse as a YAML code block', async () => {
+    const source = '---\nname: [unclosed\nkey: : bad\n---\n\nBody\n'
+    const out = html(source)
+    expect(out).toContain('<div class="frontmatter"><pre><code class="language-yaml">name: [unclosed\nkey: : bad\n</code></pre></div>')
+    expect(out).not.toContain('<table')
+    expect(out).toContain('<p>Body</p>')
+
+    const highlighted = toHtml(await renderMarkdown(source))
+    expect(highlighted).toMatch(/^<div class="frontmatter"><pre class="shiki /)
+  })
+
+  it('shows a top-level list or scalar as a code block', () => {
+    expect(html('---\n- a\n- b\n---\n')).toContain('<code class="language-yaml">- a\n- b\n</code>')
+    expect(html('---\njust text\n---\n')).toContain('<code class="language-yaml">just text\n</code>')
+  })
+
+  it('shows HTML in values as text', () => {
+    const out = html(
+      '---\ntitle: "<script>alert(1)</script><img src=x onerror=alert(2)>"\nlist:\n  - <b>bold</b>\n---\n',
+    )
+    expect(out).not.toMatch(/<script|<img|<b>/)
+    expect(out).toContain('&#x3C;script>alert(1)&#x3C;/script>&#x3C;img src=x onerror=alert(2)>')
+    expect(out).toContain('<li>&#x3C;b>bold&#x3C;/b></li>')
+  })
+
+  it('shows HTML in malformed frontmatter as text', () => {
+    const out = html('---\n<script>alert(1)</script>: : [\n---\n')
+    expect(out).not.toContain('<script')
+    expect(out).toContain('&#x3C;script>')
+  })
+
+  it('only recognises frontmatter at the very start', () => {
+    const out = html('Intro\n\n---\nname: x\n---\n\nAfter\n')
+    expect(out).not.toContain('frontmatter')
+    expect(out).toContain('<hr>')
+    expect(out).toContain('<h2>name: x</h2>')
+  })
+
+  it('keeps a later --- a horizontal rule', () => {
+    const out = html('---\nname: x\n---\n\nAbove\n\n---\n\nBelow\n')
+    expect(out).toContain('<th>name</th>')
+    expect(out.match(/<hr>/g)).toHaveLength(1)
+    expect(out).toContain('<p>Above</p>\n<hr>\n<p>Below</p>')
+  })
+
+  it('renders nothing for empty frontmatter', () => {
+    expect(html('---\n---\n\n# Title\n')).toBe('<h1>Title</h1>')
+  })
+
+  it('keeps ids, links and footnotes in the body working', () => {
+    const out = html('---\nname: x\n---\n\n<h2 id="part">Part</h2>\n\n[to part](#part) Note[^1]\n\n[^1]: The note.')
+    expect(out).toContain('id="user-content-part"')
+    expect(out).toContain('href="#part"')
+    expect(out).toContain('id="user-content-fn-1"')
+  })
+})

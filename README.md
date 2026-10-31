@@ -6,8 +6,8 @@ Open a folder, pick a Markdown file from the sidebar, and edit it with a live pr
 
 ## Features
 
-- **Editor**: CodeMirror 6 with Markdown highlighting, undo and redo, find and replace, and line wrapping. Enter continues lists and quotes.
-- **Preview**: GitHub-flavored Markdown with tables, task lists, strikethrough, autolinks and footnotes. Inline HTML is allowed but sanitized the way GitHub does it. Code blocks are coloured with [Shiki](https://shiki.style) for about 35 common languages. Each language loads the first time a document uses it. The preview updates 200 ms after you stop typing.
+- **Editor**: CodeMirror 6 with Markdown highlighting (YAML frontmatter is highlighted as YAML), undo and redo, find and replace, and line wrapping. Enter continues lists and quotes.
+- **Preview**: GitHub-flavored Markdown with tables, task lists, strikethrough, autolinks and footnotes. YAML frontmatter at the top of a file (as in `SKILL.md` files) shows as a key/value table; frontmatter that does not parse shows as a YAML code block. Inline HTML is allowed but sanitized the way GitHub does it. Code blocks are coloured with [Shiki](https://shiki.style) for about 35 common languages. Each language loads the first time a document uses it. The preview updates 200 ms after you stop typing.
 - **Layout**: switch between editor only, preview only, and both side by side. Drag the bars between the panes to resize them. mdpad remembers the view and the sizes.
 - **Themes**: follow the system, or pick Light, Dark, Gruvbox Material Dark Hard or Tokyo Night Moon from **View → Theme** or the button in the status bar. The editor, preview and code colours all follow the choice, and mdpad remembers it.
 - **Links in the preview**: web links (http and https) open in your browser. Links to other `.md` files inside the open folder open in mdpad. `#anchors` jump within the preview, including footnotes. All other links do nothing.

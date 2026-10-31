@@ -1,10 +1,12 @@
 import type { Element, ElementContent, Root, RootContent } from 'hast'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
+import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
+import { frontmatterTree } from './frontmatter'
 import { grammarFor, loadHighlighter, type CodeHighlighter } from './highlighter'
 
 /**
@@ -19,12 +21,21 @@ const schema = { ...defaultSchema, strip: [...(defaultSchema.strip ?? []), 'styl
 /** The prefix the sanitizer puts on every id; in-page links (`#x`) point at `user-content-x`. */
 export const ID_PREFIX = 'user-content-'
 
+/** The class of the block that shows the document's YAML frontmatter. */
+export const FRONTMATTER_CLASS = 'frontmatter'
+
 const processor = unified()
   .use(remarkParse)
+  // YAML frontmatter, recognised only at the very start of the document, as on GitHub.
+  .use(remarkFrontmatter, ['yaml'])
   .use(remarkGfm)
   // Raw HTML in the Markdown is parsed into the tree here and cleaned by the next two steps.
   // Footnote ids get their prefix from the sanitizer, like every other id.
-  .use(remarkRehype, { allowDangerousHtml: true, clobberPrefix: '' })
+  .use(remarkRehype, {
+    allowDangerousHtml: true,
+    clobberPrefix: '',
+    handlers: { yaml: (_state, node: { value: string }) => frontmatterTree(node.value) ?? undefined },
+  })
   .use(rehypeRaw)
   .use(rehypeSanitize, schema)
 
@@ -33,7 +44,21 @@ const processor = unified()
  * here: everything later only adds markup that mdpad generates itself.
  */
 export function markdownToSafeTree(markdown: string): Root {
-  return processor.runSync(processor.parse(markdown))
+  const mdast = processor.parse(markdown)
+  const first = mdast.children[0]
+  const hasFrontmatter = first?.type === 'yaml' && first.value.trim() !== ''
+  const tree = processor.runSync(mdast)
+  if (hasFrontmatter) markFrontmatter(tree)
+  return tree
+}
+
+/**
+ * The sanitizer drops classes it does not know, so the frontmatter block
+ * (always the first element) gets its class only after sanitizing.
+ */
+function markFrontmatter(tree: Root): void {
+  const block = tree.children.find((node) => node.type === 'element')
+  if (block) block.properties = { className: [FRONTMATTER_CLASS] }
 }
 
 function textOf(node: ElementContent): string {
