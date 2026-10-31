@@ -58,7 +58,7 @@
  * foreground "material") with an orange accent, Inter and JetBrains Mono.
  * The main process puts the window in dark mode for it, so anything this
  * block leaves out keeps its dark value. Its layout (floating panels, the
- * icon tree, compact spacing, rainbow headings) is at the end of this file.
+ * icon tree, compact spacing, headings in the Title colour) is at the end of this file.
  */
 :root[data-theme='gruvbox-material-dark-hard'] {
   color-scheme: dark;
@@ -77,12 +77,12 @@
   --unsaved: #d8a657;
   --danger: #ea6962;
   --md-heading: #e78a4e;
-  --h1: #ea6962;
-  --h2: #e78a4e;
-  --h3: #d8a657;
-  --h4: #a9b665;
-  --h5: #7daea3;
-  --h6: #d3869b;
+  --h1: var(--md-heading);
+  --h2: var(--md-heading);
+  --h3: var(--md-heading);
+  --h4: var(--md-heading);
+  --h5: var(--md-heading);
+  --h6: var(--md-heading);
   --md-link: #d3869b;
   --md-url: #7daea3;
   --md-url-decoration: underline;
@@ -126,12 +126,12 @@
   --unsaved: #ff966c;
   --danger: #ff757f;
   --md-heading: #82aaff;
-  --h1: #82aaff;
-  --h2: #ffc777;
-  --h3: #c3e88d;
-  --h4: #4fd6be;
-  --h5: #c099ff;
-  --h6: #fca7ea;
+  --h1: var(--md-heading);
+  --h2: var(--md-heading);
+  --h3: var(--md-heading);
+  --h4: var(--md-heading);
+  --h5: var(--md-heading);
+  --h6: var(--md-heading);
   --md-link: #4fd6be;
   --md-url: #c8d3f5;
   --md-url-decoration: underline;
@@ -650,7 +650,7 @@ button {
 /*
  * Layout shared by the custom themes (Gruvbox Material Dark Hard and Tokyo
  * Night Moon): floating panels on the darker base, a tree with folder and
- * file icons, compact spacing and a colour per heading level. Each theme's colours are in its
+ * file icons, compact spacing and headings in the Title colour. Each theme's colours are in its
  * variable block at the top.
  */
 
