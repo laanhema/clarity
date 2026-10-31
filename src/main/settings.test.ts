@@ -61,6 +61,14 @@ describe('parseSettings', () => {
     expect(settings.window).toEqual({ x: 10, y: 20, width: 900, height: 700, maximized: true })
   })
 
+  it('defaults to the Dark theme, and keeps a saved theme', () => {
+    expect(DEFAULT_UI_SETTINGS.theme).toBe('dark')
+    expect(parseSettings('{}').ui.theme).toBe('dark')
+    expect(parseSettings(JSON.stringify({ ui: { theme: 'purple' } })).ui.theme).toBe('dark')
+    expect(parseSettings(JSON.stringify({ ui: { theme: 'system' } })).ui.theme).toBe('system')
+    expect(parseSettings(JSON.stringify({ ui: { theme: 'light' } })).ui.theme).toBe('light')
+  })
+
   it('defaults to Commit Mono at 14px, and keeps saved font settings', () => {
     expect(DEFAULT_UI_SETTINGS).toMatchObject({ font: 'commit-mono', fontSize: 14 })
     expect(parseSettings(JSON.stringify({ ui: { theme: 'dark' } })).ui).toMatchObject({ font: 'commit-mono', fontSize: 14 })

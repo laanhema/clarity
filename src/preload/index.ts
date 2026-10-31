@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import {
+  DEFAULT_UI_SETTINGS,
   INITIAL_THEME_SWITCH,
   IpcChannel,
   MENU_COMMANDS,
@@ -29,7 +30,7 @@ function subscribe(channel: string, handler: (event: IpcRendererEvent, ...args: 
 /** The theme the main process passed on the command line when it opened this window. */
 function initialTheme(): ThemeSetting {
   const value = process.argv.find((arg) => arg.startsWith(INITIAL_THEME_SWITCH))?.slice(INITIAL_THEME_SWITCH.length)
-  return THEME_SETTINGS.find((theme) => theme === value) ?? 'system'
+  return THEME_SETTINGS.find((theme) => theme === value) ?? DEFAULT_UI_SETTINGS.theme
 }
 
 const api: MdpadApi = {

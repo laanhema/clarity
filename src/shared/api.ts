@@ -80,7 +80,7 @@ export interface UiSettings {
 
 export const DEFAULT_UI_SETTINGS: UiSettings = {
   viewMode: 'split',
-  theme: 'system',
+  theme: 'dark',
   sidebarWidth: 240,
   editorFraction: 0.5,
   font: 'commit-mono',
