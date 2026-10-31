@@ -104,6 +104,55 @@
   --editor-pad-x: 14px;
 }
 
+/*
+ * Tokyo Night Moon (folke/tokyonight.nvim, style "moon") with its blue Title
+ * accent and the same fonts and layout as Gruvbox Material Dark Hard. Like
+ * that theme it runs the window in dark mode.
+ */
+:root[data-theme='tokyo-night-moon'] {
+  color-scheme: dark;
+  --bg: #222436;
+  --bg-sidebar: #1e2030;
+  --bg-status: #1e2030;
+  --bg-hover: #2f334d;
+  --bg-active: color-mix(in srgb, #82aaff 24%, transparent);
+  --fg: #c8d3f5;
+  --fg-muted: #828bb8;
+  --fg-status: #828bb8;
+  --border: #1b1d2b;
+  --rule: #3b4261;
+  --dir: #82aaff;
+  --accent: #82aaff;
+  --unsaved: #ff966c;
+  --danger: #ff757f;
+  --md-heading: #82aaff;
+  --h1: #82aaff;
+  --h2: #ffc777;
+  --h3: #c3e88d;
+  --h4: #4fd6be;
+  --h5: #c099ff;
+  --h6: #fca7ea;
+  --md-link: #4fd6be;
+  --md-url: #c8d3f5;
+  --md-url-decoration: underline;
+  --md-code: #c3e88d;
+  --md-mark: #636da6;
+  --md-list: #ff966c;
+  --md-list-weight: 700;
+  --md-quote: #828bb8;
+  --editor-selection: #2d3f76;
+  --editor-active-line: #2f334d;
+  --editor-match: color-mix(in srgb, #3e68d7 45%, transparent);
+  --editor-match-selected: color-mix(in srgb, #ff966c 40%, transparent);
+  --code-bg: #1e2030;
+  --inline-code-bg: #2f334d;
+  --inline-code-fg: #c3e88d;
+  --font-ui: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  --editor-pad-y: 10px;
+  --editor-pad-x: 14px;
+}
+
 *,
 *::before,
 *::after {
@@ -463,7 +512,7 @@ button {
 
 /*
  * Shiki colours each token with every theme as CSS variables
- * (--shiki-light, --shiki-dark, --shiki-gruvbox); the active theme picks one set.
+ * (--shiki-light, --shiki-dark, --shiki-gruvbox, --shiki-tokyo); the active theme picks one set.
  */
 .markdown-body pre.shiki,
 .markdown-body pre.shiki span {
@@ -500,6 +549,17 @@ button {
 
 :root[data-theme='gruvbox-material-dark-hard'] .markdown-body pre.shiki {
   background-color: var(--shiki-gruvbox-bg);
+}
+
+:root[data-theme='tokyo-night-moon'] :is(.markdown-body pre.shiki, .markdown-body pre.shiki span) {
+  color: var(--shiki-tokyo);
+  font-style: var(--shiki-tokyo-font-style);
+  font-weight: var(--shiki-tokyo-font-weight);
+  text-decoration: var(--shiki-tokyo-text-decoration);
+}
+
+:root[data-theme='tokyo-night-moon'] .markdown-body pre.shiki {
+  background-color: var(--shiki-tokyo-bg);
 }
 
 /* Status bar */
@@ -544,52 +604,53 @@ button {
 }
 
 /*
- * Gruvbox Material Dark Hard layout: floating panels on the darker base,
- * a tree with folder and file icons, compact spacing and a colour per
- * heading level. Colours are in its variable block at the top.
+ * Layout shared by the custom themes (Gruvbox Material Dark Hard and Tokyo
+ * Night Moon): floating panels on the darker base, a tree with folder and
+ * file icons, compact spacing and a colour per heading level. Each theme's colours are in its
+ * variable block at the top.
  */
 
-[data-theme='gruvbox-material-dark-hard'] .workspace {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .workspace {
   padding: 6px 6px 0;
   background: var(--bg-sidebar);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .splitter {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .splitter {
   background: transparent;
 }
 
-[data-theme='gruvbox-material-dark-hard'] :is(.splitter:hover, .splitter:focus-visible) {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) :is(.splitter:hover, .splitter:focus-visible) {
   background: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
-[data-theme='gruvbox-material-dark-hard'] :is(.sidebar, .pane) {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) :is(.sidebar, .pane) {
   overflow: hidden;
   border-radius: 8px;
   background: var(--bg);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .preview-pane {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .preview-pane {
   overflow: auto;
   padding: 12px 18px 40px;
 }
 
-[data-theme='gruvbox-material-dark-hard'] .sidebar-header {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .sidebar-header {
   padding: 6px 8px;
   border-bottom-color: transparent;
 }
 
-[data-theme='gruvbox-material-dark-hard'] .sidebar-title {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .sidebar-title {
   color: var(--fg-muted);
   font-size: 0.85em;
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 
-[data-theme='gruvbox-material-dark-hard'] .tree-icon {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree-icon {
   display: block;
 }
 
-[data-theme='gruvbox-material-dark-hard'] .tree-row {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree-row {
   gap: 6px;
   width: calc(100% - 12px);
   margin: 0 6px;
@@ -597,64 +658,64 @@ button {
   border-radius: 5px;
 }
 
-[data-theme='gruvbox-material-dark-hard'] .tree-directory {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree-directory {
   color: var(--dir);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .tree-file {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree-file {
   padding-left: 12px;
 }
 
-[data-theme='gruvbox-material-dark-hard'] .tree-file .tree-icon {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree-file .tree-icon {
   color: var(--fg-muted);
 }
 
 /* Indent guides */
-[data-theme='gruvbox-material-dark-hard'] .tree .tree {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree .tree {
   margin-left: 20px;
   padding-left: 0;
   border-left: 1px solid var(--rule);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .status-bar {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .status-bar {
   padding: 2px 8px;
   border-top-color: transparent;
   background: var(--bg-sidebar);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .markdown-body h1 {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h1 {
   color: var(--h1);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .markdown-body h2 {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h2 {
   color: var(--h2);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .markdown-body h3 {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h3 {
   color: var(--h3);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .markdown-body h4 {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h4 {
   color: var(--h4);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .markdown-body h5 {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h5 {
   color: var(--h5);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .markdown-body h6 {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h6 {
   color: var(--h6);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .markdown-body a {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body a {
   color: var(--md-link);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .markdown-body li::marker {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body li::marker {
   color: var(--md-list);
 }
 
-[data-theme='gruvbox-material-dark-hard'] .markdown-body :not(pre) > code {
+:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body :not(pre) > code {
   background: var(--inline-code-bg);
   color: var(--inline-code-fg);
 }

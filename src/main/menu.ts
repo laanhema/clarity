@@ -39,6 +39,7 @@ const THEME_ITEMS: { theme: ThemeSetting; label: string }[] = [
   { theme: 'light', label: 'Light' },
   { theme: 'dark', label: 'Dark' },
   { theme: 'gruvbox-material-dark-hard', label: 'Gruvbox Material Dark Hard' },
+  { theme: 'tokyo-night-moon', label: 'Tokyo Night Moon' },
 ]
 
 function recentSubmenu(options: MenuOptions): MenuItemConstructorOptions[] {

@@ -110,8 +110,10 @@ describe('code highlighting', () => {
 
   it('colours code blocks with the variables of every theme', async () => {
     const out = toHtml(await renderMarkdown('```ts\nconst answer: number = 42\n```'))
-    expect(out).toContain('class="shiki shiki-themes github-light github-dark gruvbox-material-dark-hard"')
-    expect(out).toMatch(/style="[^"]*--shiki-light:#[0-9a-f]+;--shiki-dark:#[0-9a-f]+;--shiki-gruvbox:#[0-9a-f]+/i)
+    expect(out).toContain('class="shiki shiki-themes github-light github-dark gruvbox-material-dark-hard tokyo-night-moon"')
+    expect(out).toMatch(
+      /style="[^"]*--shiki-light:#[0-9a-f]+;--shiki-dark:#[0-9a-f]+;--shiki-gruvbox:#[0-9a-f]+;--shiki-tokyo:#[0-9a-f]+/i,
+    )
     expect(out).toContain('answer')
   })
 
@@ -124,6 +126,25 @@ describe('code highlighting', () => {
     expect(gruvbox(':')?.toLowerCase()).toBe('#928374')
     expect(out).toMatch(/--shiki-gruvbox-bg:#282828/i)
     expect(out).toMatch(/--shiki-gruvbox:#928374;[^"]*--shiki-gruvbox-font-style:italic[^>]*>\/\/ note</i)
+  })
+
+  it('colours code with the Tokyo Night Moon palette, not Tokyo Night', async () => {
+    const out = toHtml(
+      await renderMarkdown('```ts\n// note\nimport { x } from "y"\nfunction add(a: number): Point {\n  return a + 42\n}\n```'),
+    )
+    const tokyo = (token: string) => new RegExp(`--shiki-tokyo:(#[0-9a-f]+)[^>]*>\\s*${token}<`, 'i').exec(out)?.[1]
+    expect(tokyo('import')?.toLowerCase()).toBe('#86e1fc')
+    expect(tokyo('function')?.toLowerCase()).toBe('#c099ff')
+    expect(tokyo('return')?.toLowerCase()).toBe('#fca7ea')
+    expect(tokyo('add')?.toLowerCase()).toBe('#82aaff')
+    expect(tokyo('"y"')?.toLowerCase()).toBe('#c3e88d')
+    expect(tokyo('a')?.toLowerCase()).toBe('#ffc777')
+    expect(tokyo('number')?.toLowerCase()).toBe('#589ed7')
+    expect(tokyo('Point')?.toLowerCase()).toBe('#65bcff')
+    expect(tokyo('42')?.toLowerCase()).toBe('#ff966c')
+    expect(tokyo('\\+')?.toLowerCase()).toBe('#89ddff')
+    expect(out).toMatch(/--shiki-tokyo-bg:#1e2030/i)
+    expect(out).toMatch(/--shiki-tokyo:#636da6;[^"]*--shiki-tokyo-font-style:italic[^>]*>\/\/ note</i)
   })
 
   it('leaves blocks without a known language alone', async () => {

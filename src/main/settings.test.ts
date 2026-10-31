@@ -71,6 +71,7 @@ describe('sanitizeUiPatch', () => {
   it('accepts only known settings with valid values', () => {
     expect(sanitizeUiPatch({ viewMode: 'editor', theme: 'dark', extra: 1 })).toEqual({ viewMode: 'editor', theme: 'dark' })
     expect(sanitizeUiPatch({ theme: 'gruvbox-material-dark-hard' })).toEqual({ theme: 'gruvbox-material-dark-hard' })
+    expect(sanitizeUiPatch({ theme: 'tokyo-night-moon' })).toEqual({ theme: 'tokyo-night-moon' })
     expect(sanitizeUiPatch({ editorFraction: 2, sidebarWidth: 100.6 })).toEqual({ editorFraction: 0.85, sidebarWidth: 160 })
     expect(sanitizeUiPatch({ editorFraction: Number.NaN, viewMode: 'zen' })).toEqual({})
     expect(sanitizeUiPatch('viewMode=editor')).toEqual({})

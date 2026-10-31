@@ -41,12 +41,13 @@ export type ReloadChoice = 'reload' | 'keep'
 export type ViewMode = 'editor' | 'split' | 'preview'
 export const VIEW_MODES = ['editor', 'split', 'preview'] as const satisfies readonly ViewMode[]
 
-export type ThemeSetting = 'system' | 'light' | 'dark' | 'gruvbox-material-dark-hard'
+export type ThemeSetting = 'system' | 'light' | 'dark' | 'gruvbox-material-dark-hard' | 'tokyo-night-moon'
 export const THEME_SETTINGS = [
   'system',
   'light',
   'dark',
   'gruvbox-material-dark-hard',
+  'tokyo-night-moon',
 ] as const satisfies readonly ThemeSetting[]
 
 /** The command-line switch that hands a new window's theme to its preload script, so the first paint is right. */
