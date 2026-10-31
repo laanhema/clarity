@@ -11,6 +11,7 @@
   --accent: #2e6be6;
   --unsaved: #d4740b;
   --danger: #c4314b;
+  --dir: #0b4fa8;
   --md-heading: #0b4fa8;
   --md-link: #2e6be6;
   --md-code: #9a3d00;
@@ -50,6 +51,7 @@
     --accent: #6e9eff;
     --unsaved: #f0a64a;
     --danger: #ff7b8a;
+    --dir: #8cb4ff;
     --md-heading: #8cb4ff;
     --md-link: #6e9eff;
     --md-code: #f0a070;
@@ -66,8 +68,8 @@
  * Gruvbox Material Dark Hard (sainnhe/gruvbox-material: background "hard",
  * foreground "material") with an orange accent.
  * The main process puts the window in dark mode for it, so anything this
- * block leaves out keeps its dark value. Its layout (floating panels, the
- * icon tree, compact spacing, headings in the Title colour) is at the end of this file.
+ * block leaves out keeps its dark value. Its layout (floating panels,
+ * headings in the Title colour) is at the end of this file.
  */
 :root[data-theme='gruvbox-material-dark-hard'] {
   color-scheme: dark;
@@ -253,8 +255,8 @@ samp {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  border-bottom: 1px solid transparent;
 }
 
 .sidebar-title {
@@ -263,7 +265,11 @@ samp {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--fg-muted);
+  font-size: 0.85em;
   font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
 }
 
 .sidebar-open {
@@ -296,17 +302,22 @@ samp {
   padding: 0;
 }
 
+/* Indent guides */
 .tree .tree {
-  padding-left: 12px;
+  margin-left: 20px;
+  padding-left: 0;
+  border-left: 1px solid var(--rule, var(--border));
 }
 
 .tree-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  width: 100%;
-  padding: 3px 10px;
+  gap: 6px;
+  width: calc(100% - 12px);
+  margin: 0 6px;
+  padding: 2px 8px;
   border: 0;
+  border-radius: 5px;
   background: none;
   text-align: left;
   cursor: pointer;
@@ -327,7 +338,7 @@ samp {
   color: var(--fg-muted);
 }
 
-/* Folder icons show in every theme; file icons only in themes with an icon tree. */
+/* Folder and file icons, the same in every theme. */
 .tree-icon {
   display: block;
   flex: none;
@@ -335,12 +346,16 @@ samp {
   height: 14px;
 }
 
+.tree-directory {
+  color: var(--dir);
+}
+
 .tree-file {
-  padding-left: 26px;
+  padding-left: 12px;
 }
 
 .tree-file .tree-icon {
-  display: none;
+  color: var(--fg-muted);
 }
 
 .tree-file[aria-current='page'] {
@@ -756,9 +771,8 @@ samp {
 
 /*
  * Layout shared by the custom themes (Gruvbox Material Dark Hard and Tokyo
- * Night Moon): floating panels on the darker base, a tree with folder and
- * file icons, compact spacing and headings in the Title colour. Each theme's colours are in its
- * variable block at the top.
+ * Night Moon): floating panels on the darker base and headings in the Title
+ * colour. Each theme's colours are in its variable block at the top.
  */
 
 :is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .workspace {
@@ -783,46 +797,6 @@ samp {
 :is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .preview-pane {
   overflow: auto;
   padding: 12px 18px 40px;
-}
-
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .sidebar-header {
-  padding: 6px 8px;
-  border-bottom-color: transparent;
-}
-
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .sidebar-title {
-  color: var(--fg-muted);
-  font-size: 0.85em;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree-row {
-  gap: 6px;
-  width: calc(100% - 12px);
-  margin: 0 6px;
-  padding: 2px 8px;
-  border-radius: 5px;
-}
-
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree-directory {
-  color: var(--dir);
-}
-
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree-file {
-  padding-left: 12px;
-}
-
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree-file .tree-icon {
-  display: block;
-  color: var(--fg-muted);
-}
-
-/* Indent guides */
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree .tree {
-  margin-left: 20px;
-  padding-left: 0;
-  border-left: 1px solid var(--rule);
 }
 
 :is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .status-bar {
