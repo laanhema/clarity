@@ -54,6 +54,10 @@ describe('watchers', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenCalled(), { timeout: 3000 })
 
     onChange.mockClear()
+    await writeAt(root, '.github/notes.md', 'x')
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled(), { timeout: 3000 })
+
+    onChange.mockClear()
     await rm(path.join(root, 'a.md'))
     await vi.waitFor(() => expect(onChange).toHaveBeenCalled(), { timeout: 3000 })
   })

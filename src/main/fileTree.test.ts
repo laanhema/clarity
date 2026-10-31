@@ -36,11 +36,18 @@ describe('listMarkdownTree', () => {
     expect(file?.path).toBe(path.join(root, 'b.md'))
   })
 
-  it('ignores dot-folders and node_modules', async () => {
+  it('ignores .git and node_modules', async () => {
     await writeAt(root, '.git/HEAD.md')
-    await writeAt(root, '.obsidian/workspace.md')
     await writeAt(root, 'node_modules/pkg/README.md')
     expect(shape(await listMarkdownTree(root))).toEqual([{ guides: [{ deep: ['more.md'] }, 'setup.md'] }, 'a.markdown', 'b.md'])
+  })
+
+  it('lists hidden folders that contain Markdown, and hidden Markdown files', async () => {
+    const dir = path.join(workspace, 'hidden')
+    await writeAt(dir, '.claude/skills/SKILL.md')
+    await writeAt(dir, '.cache/data.txt')
+    await writeAt(dir, '.notes.md')
+    expect(shape(await listMarkdownTree(dir))).toEqual([{ '.claude': [{ skills: ['SKILL.md'] }] }, '.notes.md'])
   })
 
   it('sorts numbers naturally', async () => {

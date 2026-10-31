@@ -4,7 +4,7 @@ import path from 'node:path'
 import type { FileTreeNode } from '../shared/api'
 import { isMarkdownPath, isWithin } from './pathGuard'
 
-const IGNORED_DIRECTORIES = new Set(['node_modules'])
+const IGNORED_DIRECTORIES = new Set(['.git', 'node_modules'])
 const MAX_DEPTH = 32
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
@@ -14,9 +14,9 @@ function compareNodes(a: FileTreeNode, b: FileTreeNode): number {
   return collator.compare(a.name, b.name)
 }
 
-/** Dot-folders such as `.git`, and `node_modules`, are never listed or watched. */
+/** `.git` and `node_modules` are never listed or watched; other dot-folders are treated like any folder. */
 export function isIgnoredDirectory(name: string): boolean {
-  return name.startsWith('.') || IGNORED_DIRECTORIES.has(name)
+  return IGNORED_DIRECTORIES.has(name)
 }
 
 /**
