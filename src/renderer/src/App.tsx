@@ -106,6 +106,15 @@ export function App() {
     document.documentElement.dataset['theme'] = settings.theme
   }, [settings.theme])
 
+  // styles.css takes the reading and writing font from data-font, and scales the editor and preview text from --content-size.
+  useEffect(() => {
+    document.documentElement.dataset['font'] = settings.font
+  }, [settings.font])
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--content-size', `${settings.fontSize}px`)
+  }, [settings.fontSize])
+
   useEffect(() => {
     api.watchDocument(doc.path).catch((error: unknown) => setMessage(errorMessage(error)))
   }, [api, doc.path])

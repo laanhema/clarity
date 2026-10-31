@@ -85,6 +85,8 @@ function applySettings(settings: SettingsStore, previous: Settings | null): void
       recentFolders,
       setViewMode: (viewMode) => settings.update((current) => ({ ...current, ui: { ...current.ui, viewMode } })),
       setTheme: (theme) => settings.update((current) => ({ ...current, ui: { ...current.ui, theme } })),
+      setFont: (font) => settings.update((current) => ({ ...current, ui: { ...current.ui, font } })),
+      setFontSize: (fontSize) => settings.update((current) => ({ ...current, ui: { ...current.ui, fontSize } })),
       openRecent: (window, folder) => {
         const state = stateFor(window.webContents)
         if (state) void openRecentFolder(state, folder, settings)

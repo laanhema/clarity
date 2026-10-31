@@ -50,6 +50,14 @@ export const THEME_SETTINGS = [
   'tokyo-night-moon',
 ] as const satisfies readonly ThemeSetting[]
 
+/**
+ * The typeface of the reading and writing text (editor and preview prose).
+ * `theme` keeps each theme's own fonts; the others use one typeface for both panes.
+ * Code in the preview always keeps the theme's monospace font.
+ */
+export type FontSetting = 'theme' | 'sans' | 'serif' | 'mono'
+export const FONT_SETTINGS = ['theme', 'sans', 'serif', 'mono'] as const satisfies readonly FontSetting[]
+
 /** The command-line switch that hands a new window's theme to its preload script, so the first paint is right. */
 export const INITIAL_THEME_SWITCH = '--mdpad-theme='
 
@@ -61,6 +69,12 @@ export interface UiSettings {
   sidebarWidth: number
   /** The editor's share of the editor + preview width in split view, between 0 and 1. */
   editorFraction: number
+  font: FontSetting
+  /**
+   * Editor text size in CSS pixels. The preview scales with it: prose is 15/14
+   * and code blocks 13/14 of this size.
+   */
+  fontSize: number
 }
 
 export const DEFAULT_UI_SETTINGS: UiSettings = {
@@ -68,10 +82,13 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   theme: 'system',
   sidebarWidth: 240,
   editorFraction: 0.5,
+  font: 'theme',
+  fontSize: 14,
 }
 
 export const SIDEBAR_WIDTH_RANGE = { min: 160, max: 600 } as const
 export const EDITOR_FRACTION_RANGE = { min: 0.15, max: 0.85 } as const
+export const FONT_SIZE_RANGE = { min: 10, max: 28 } as const
 
 export interface MdpadApi {
   /** The theme setting when the window opened, available before `getSettings` resolves. */

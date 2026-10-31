@@ -32,7 +32,7 @@ export interface EditorProps {
 const editorTheme = EditorView.theme({
   '&': { flex: '1', minHeight: '0', backgroundColor: 'var(--bg)', color: 'var(--fg)' },
   '&.cm-focused': { outline: 'none' },
-  '.cm-scroller': { fontFamily: 'var(--font-mono)', fontSize: 'var(--editor-size)', lineHeight: 'var(--editor-lh)' },
+  '.cm-scroller': { fontFamily: 'var(--font-editor)', fontSize: 'var(--editor-size)', lineHeight: 'var(--editor-lh)' },
   '.cm-content': { padding: 'var(--editor-pad-y) 0', caretColor: 'var(--fg)' },
   '.cm-line': { padding: '0 var(--editor-pad-x)' },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--fg)' },

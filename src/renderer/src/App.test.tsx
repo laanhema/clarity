@@ -1,9 +1,10 @@
 import { EditorView } from '@codemirror/view'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_UI_SETTINGS, type OpenedFolder } from '../../shared/api'
 import { App } from './App'
+import styles from './styles.css?raw'
 import { installMockApi } from './test/mockApi'
 
 const folder: OpenedFolder = {
@@ -480,5 +481,87 @@ describe('changes made by other programs', () => {
     mock.openFolderFromMenu({ rootPath: '/recent', tree: [{ kind: 'file', name: 'r.md', path: '/recent/r.md' }] })
     expect(screen.getByText('recent')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'r.md' })).toBeInTheDocument()
+  })
+})
+
+describe('font and font size', () => {
+  // jsdom cascades custom properties but neither substitutes var() nor inherits them into
+  // shadow roots, where the editor lives, so the test does both itself.
+  function customProperty(element: Element, name: string): string {
+    const value = getComputedStyle(element).getPropertyValue(name).trim()
+    const root = element.getRootNode()
+    return value || !(root instanceof ShadowRoot) ? value : customProperty(root.host, name)
+  }
+
+  function resolve(element: Element, value: string): string {
+    const resolved = value.replace(/var\((--[\w-]+)\)/g, (_match, name: string) => customProperty(element, name))
+    return resolved === value ? value : resolve(element, resolved)
+  }
+
+  const editorScroller = () => {
+    const scroller = editorRoot().querySelector('.cm-scroller')
+    if (!scroller) throw new Error('No editor scroller')
+    return scroller
+  }
+
+  const previewBody = () => {
+    const body = document.querySelector('.markdown-body')
+    if (!body) throw new Error('No preview')
+    return body
+  }
+
+  const previewCode = () => {
+    const code = document.querySelector('.markdown-body pre > code')
+    if (!code) throw new Error('No code block')
+    return code
+  }
+
+  const fontOf = (element: Element) => resolve(element, getComputedStyle(element).fontFamily)
+  const sizeOf = (element: Element) => resolve(element, getComputedStyle(element).fontSize)
+
+  let stylesheet: HTMLStyleElement
+
+  beforeEach(async () => {
+    stylesheet = document.createElement('style')
+    stylesheet.textContent = styles
+    document.head.append(stylesheet)
+    files['/notes/code.md'] = '# Code\n\n```\nplain\n```\n'
+    mock.api.openFile.mockResolvedValue({ path: '/notes/code.md', content: files['/notes/code.md'] })
+    render(<App />)
+    mock.sendMenuCommand('open-file')
+    await waitFor(() => expect(previewCode()).toBeInTheDocument(), { timeout: 2000 })
+  })
+
+  afterEach(() => {
+    stylesheet.remove()
+    delete files['/notes/code.md']
+    delete document.documentElement.dataset['font']
+    document.documentElement.style.removeProperty('--content-size')
+  })
+
+  it("keeps the theme's fonts and today's sizes by default", () => {
+    expect(document.documentElement).toHaveAttribute('data-font', 'theme')
+    expect(fontOf(editorScroller())).toMatch(/^ui-monospace,/)
+    expect(fontOf(previewBody())).toMatch(/^system-ui,/)
+    expect(sizeOf(editorScroller())).toBe('14px')
+    expect(sizeOf(previewBody())).toBe('calc(14px * 15 / 14)')
+    expect(sizeOf(previewCode())).toBe('calc(14px * 13 / 14)')
+  })
+
+  it('applies a changed font and size to the editor and the preview at once', () => {
+    mock.changeSettings({ ...DEFAULT_UI_SETTINGS, font: 'serif', fontSize: 20 })
+    expect(fontOf(editorScroller())).toMatch(/Georgia.*serif$/)
+    expect(fontOf(previewBody())).toMatch(/Georgia.*serif$/)
+    expect(sizeOf(editorScroller())).toBe('20px')
+    expect(sizeOf(previewBody())).toBe('calc(20px * 15 / 14)')
+    expect(sizeOf(previewCode())).toBe('calc(20px * 13 / 14)')
+
+    mock.changeSettings({ ...DEFAULT_UI_SETTINGS, font: 'sans' })
+    expect(fontOf(editorScroller())).toMatch(/^"Inter Variable"/)
+    expect(fontOf(previewBody())).toMatch(/^"Inter Variable"/)
+    expect(sizeOf(editorScroller())).toBe('14px')
+
+    mock.changeSettings({ ...DEFAULT_UI_SETTINGS, font: 'mono' })
+    expect(fontOf(previewBody())).toMatch(/^ui-monospace,/)
   })
 })

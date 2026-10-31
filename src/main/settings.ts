@@ -3,9 +3,12 @@ import path from 'node:path'
 import {
   DEFAULT_UI_SETTINGS,
   EDITOR_FRACTION_RANGE,
+  FONT_SETTINGS,
+  FONT_SIZE_RANGE,
   SIDEBAR_WIDTH_RANGE,
   THEME_SETTINGS,
   VIEW_MODES,
+  type FontSetting,
   type ThemeSetting,
   type UiSettings,
   type ViewMode,
@@ -59,6 +62,10 @@ export function sanitizeUiPatch(patch: unknown): Partial<UiSettings> {
   if (sidebarWidth !== undefined) result.sidebarWidth = Math.round(sidebarWidth)
   const editorFraction = clampedNumber(patch['editorFraction'], EDITOR_FRACTION_RANGE)
   if (editorFraction !== undefined) result.editorFraction = editorFraction
+  const font: FontSetting | undefined = oneOf(FONT_SETTINGS, patch['font'])
+  if (font) result.font = font
+  const fontSize = clampedNumber(patch['fontSize'], FONT_SIZE_RANGE)
+  if (fontSize !== undefined) result.fontSize = Math.round(fontSize)
   return result
 }
 

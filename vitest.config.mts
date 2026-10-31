@@ -18,6 +18,8 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['src/renderer/**/*.test.{ts,tsx}'],
           setupFiles: ['./src/renderer/src/test/setup.ts'],
+          // Vitest replaces CSS with an empty string; the font tests read the real app stylesheet with ?raw.
+          css: { include: [/src\/renderer\/src\/styles\.css/] },
         },
       },
     ],

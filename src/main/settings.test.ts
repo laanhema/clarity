@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_UI_SETTINGS } from '../shared/api'
+import { DEFAULT_UI_SETTINGS, FONT_SIZE_RANGE } from '../shared/api'
 import {
   MAX_RECENT_FOLDERS,
   SettingsStore,
@@ -61,6 +61,15 @@ describe('parseSettings', () => {
     expect(settings.window).toEqual({ x: 10, y: 20, width: 900, height: 700, maximized: true })
   })
 
+  it("defaults to the theme's font at today's 14px size, and keeps saved font settings", () => {
+    expect(DEFAULT_UI_SETTINGS).toMatchObject({ font: 'theme', fontSize: 14 })
+    expect(parseSettings(JSON.stringify({ ui: { theme: 'dark' } })).ui).toMatchObject({ font: 'theme', fontSize: 14 })
+    expect(parseSettings(JSON.stringify({ ui: { font: 'serif', fontSize: 18 } })).ui).toMatchObject({
+      font: 'serif',
+      fontSize: 18,
+    })
+  })
+
   it('rejects unusable window bounds', () => {
     expect(parseSettings(JSON.stringify({ window: { x: 0, y: 0, width: 10, height: 10 } })).window).toBeNull()
     expect(parseSettings(JSON.stringify({ window: { x: 'a', y: 0, width: 800, height: 600 } })).window).toBeNull()
@@ -76,6 +85,19 @@ describe('sanitizeUiPatch', () => {
     expect(sanitizeUiPatch({ editorFraction: Number.NaN, viewMode: 'zen' })).toEqual({})
     expect(sanitizeUiPatch('viewMode=editor')).toEqual({})
     expect(sanitizeUiPatch(null)).toEqual({})
+  })
+
+  it('accepts the bundled and system font choices and clamps the font size', () => {
+    for (const font of ['theme', 'sans', 'serif', 'mono'] as const) {
+      expect(sanitizeUiPatch({ font })).toEqual({ font })
+    }
+    expect(sanitizeUiPatch({ font: 'Comic Sans MS' })).toEqual({})
+    expect(sanitizeUiPatch({ font: 'https://fonts.example/font.woff2' })).toEqual({})
+    expect(sanitizeUiPatch({ fontSize: 16.4 })).toEqual({ fontSize: 16 })
+    expect(sanitizeUiPatch({ fontSize: 2 })).toEqual({ fontSize: FONT_SIZE_RANGE.min })
+    expect(sanitizeUiPatch({ fontSize: 400 })).toEqual({ fontSize: FONT_SIZE_RANGE.max })
+    expect(sanitizeUiPatch({ fontSize: '16' })).toEqual({})
+    expect(sanitizeUiPatch({ fontSize: Number.POSITIVE_INFINITY })).toEqual({})
   })
 })
 

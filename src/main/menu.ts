@@ -1,6 +1,8 @@
 import { BrowserWindow, Menu, type BaseWindow, type MenuItemConstructorOptions } from 'electron'
 import {
+  DEFAULT_UI_SETTINGS,
   IpcChannel,
+  type FontSetting,
   type MenuCommand,
   type ThemeSetting,
   type UiSettings,
@@ -14,6 +16,8 @@ export interface MenuOptions {
   recentFolders: readonly string[]
   setViewMode(mode: ViewMode): void
   setTheme(theme: ThemeSetting): void
+  setFont(font: FontSetting): void
+  setFontSize(fontSize: number): void
   openRecent(window: BrowserWindow, folder: string): void
   clearRecent(): void
 }
@@ -41,6 +45,16 @@ const THEME_ITEMS: { theme: ThemeSetting; label: string }[] = [
   { theme: 'gruvbox-material-dark-hard', label: 'Gruvbox Material Dark Hard' },
   { theme: 'tokyo-night-moon', label: 'Tokyo Night Moon' },
 ]
+
+const FONT_ITEMS: { font: FontSetting; label: string }[] = [
+  { font: 'theme', label: 'Theme Default' },
+  { font: 'sans', label: 'Sans Serif' },
+  { font: 'serif', label: 'Serif' },
+  { font: 'mono', label: 'Monospace' },
+]
+
+/** Editor text sizes offered in the menu; the preview scales with them. 14 is the default. */
+const FONT_SIZES = [10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28] as const
 
 function recentSubmenu(options: MenuOptions): MenuItemConstructorOptions[] {
   if (options.recentFolders.length === 0) return [{ label: 'No Recent Folders', enabled: false }]
@@ -118,6 +132,28 @@ export function buildMenu(options: MenuOptions): Menu {
             type: 'radio',
             checked: ui.theme === theme,
             click: () => options.setTheme(theme),
+          }),
+        ),
+      },
+      {
+        label: 'Font',
+        submenu: FONT_ITEMS.map(
+          ({ font, label }): MenuItemConstructorOptions => ({
+            label,
+            type: 'radio',
+            checked: ui.font === font,
+            click: () => options.setFont(font),
+          }),
+        ),
+      },
+      {
+        label: 'Font Size',
+        submenu: FONT_SIZES.map(
+          (fontSize): MenuItemConstructorOptions => ({
+            label: fontSize === DEFAULT_UI_SETTINGS.fontSize ? `${fontSize} px (Default)` : `${fontSize} px`,
+            type: 'radio',
+            checked: ui.fontSize === fontSize,
+            click: () => options.setFontSize(fontSize),
           }),
         ),
       },

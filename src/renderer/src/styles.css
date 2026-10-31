@@ -22,10 +22,33 @@
   --code-bg: #f6f8fa;
   --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
-  --editor-size: 14px;
+  /* Fonts the Font setting offers: bundled Inter, or the system's serif. */
+  --font-sans: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-serif: 'Iowan Old Style', Charter, Georgia, Cambria, 'Noto Serif', 'DejaVu Serif', serif;
+  /* The reading and writing text. The Font setting replaces these through data-font. */
+  --font-editor: var(--font-mono);
+  --font-prose: var(--font-ui);
+  /* The Font Size setting, set on this element by the app. The preview scales from it. */
+  --content-size: 14px;
+  --editor-size: var(--content-size);
   --editor-lh: 1.6;
   --editor-pad-y: 16px;
   --editor-pad-x: 20px;
+}
+
+:root[data-font='sans'] {
+  --font-editor: var(--font-sans);
+  --font-prose: var(--font-sans);
+}
+
+:root[data-font='serif'] {
+  --font-editor: var(--font-serif);
+  --font-prose: var(--font-serif);
+}
+
+:root[data-font='mono'] {
+  --font-editor: var(--font-mono);
+  --font-prose: var(--font-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -362,7 +385,9 @@ button {
 .markdown-body {
   max-width: 860px;
   margin: 0 auto;
-  font-size: 15px;
+  font-family: var(--font-prose);
+  /* 15px at the default size of 14px. */
+  font-size: calc(var(--content-size) * 15 / 14);
   line-height: 1.6;
   overflow-wrap: break-word;
 }
@@ -468,7 +493,8 @@ button {
 }
 
 .markdown-body pre > code {
-  font-size: 13px;
+  /* 13px at the default size of 14px. */
+  font-size: calc(var(--content-size) * 13 / 14);
 }
 
 .markdown-body table {
