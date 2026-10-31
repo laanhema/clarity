@@ -3,7 +3,7 @@ import type { ThemeRegistration } from '@shikijs/types'
 /**
  * Code colours for the Tokyo Night Moon theme (folke/tokyonight.nvim, style
  * "moon"), from the Neovim theme's treesitter groups. Shiki's bundled
- * `tokyo-night` is the Night variant, so mdpad defines its own.
+ * `tokyo-night` is the Night variant, so Lantern defines its own.
  */
 const palette = {
   bgDark: '#1e2030',

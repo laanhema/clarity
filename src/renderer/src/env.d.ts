@@ -1,9 +1,9 @@
 import type { JSX as ReactJSX } from 'react'
-import type { MdpadApi } from '../../shared/api'
+import type { LanternApi } from '../../shared/api'
 
 declare global {
   interface Window {
-    mdpad: MdpadApi
+    lantern: LanternApi
   }
 
   // hast-util-to-jsx-runtime types its output with the global JSX namespace,

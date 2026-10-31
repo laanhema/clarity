@@ -1,4 +1,5 @@
-import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
+import { constants } from 'node:fs'
+import { access, copyFile, mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import {
   DEFAULT_UI_SETTINGS,
@@ -124,6 +125,35 @@ export async function pruneRecentFolders(
 ): Promise<string[]> {
   const checks = await Promise.all(recent.map(exists))
   return recent.filter((_folder, index) => checks[index])
+}
+
+/** The userData folder name of the app before it was renamed to Lantern. */
+export const LEGACY_USER_DATA_FOLDER = 'mdpad'
+
+async function exists(file: string): Promise<boolean> {
+  try {
+    await access(file)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Copies the settings file of the app's old name to `filePath` when
+ * `filePath` does not exist yet, so a rename keeps the user's settings.
+ * Never changes the old file. Returns whether it copied.
+ */
+export async function migrateLegacySettings(filePath: string, legacyFilePath: string): Promise<boolean> {
+  if ((await exists(filePath)) || !(await exists(legacyFilePath))) return false
+  try {
+    await mkdir(path.dirname(filePath), { recursive: true })
+    await copyFile(legacyFilePath, filePath, constants.COPYFILE_EXCL)
+    return true
+  } catch (error) {
+    console.error('Could not copy the old settings:', error)
+    return false
+  }
 }
 
 /**

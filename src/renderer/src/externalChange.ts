@@ -1,12 +1,12 @@
 export interface DocumentSnapshot {
   content: string
-  /** The content as mdpad last saw it on disk; null when the file is gone. */
+  /** The content as Lantern last saw it on disk; null when the file is gone. */
   savedContent: string | null
 }
 
 /**
  * What to do when the watched file changed on disk.
- * - `ignore`: the disk holds what mdpad already knows, for example after mdpad's own save.
+ * - `ignore`: the disk holds what Lantern already knows, for example after Lantern's own save.
  * - `mark-saved`: the disk now holds exactly what the editor holds.
  * - `reload`: no unsaved edits, so take the new content silently.
  * - `ask`: there are unsaved edits; the user picks between reloading and keeping theirs.

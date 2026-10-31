@@ -4,7 +4,13 @@ import { INITIAL_THEME_SWITCH, IpcChannel, type UiSettings } from '../shared/api
 import { openRecentFolder, registerIpcHandlers } from './ipc'
 import { buildMenu } from './menu'
 import { denyAllPermissions, hardenWebContents } from './security'
-import { pruneRecentFolders, SettingsStore, type Settings } from './settings'
+import {
+  LEGACY_USER_DATA_FOLDER,
+  migrateLegacySettings,
+  pruneRecentFolders,
+  SettingsStore,
+  type Settings,
+} from './settings'
 import { nativeThemeSource, windowBackground } from './theme'
 import { restoreBounds } from './windowBounds'
 import { stateFor, trackWindow } from './windowState'
@@ -26,7 +32,7 @@ function createWindow(settings: SettingsStore): BrowserWindow {
     minWidth: 720,
     minHeight: 400,
     show: false,
-    title: 'mdpad',
+    title: 'Lantern',
     backgroundColor: backgroundColor(settings.current.ui),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -113,7 +119,9 @@ app.on('before-quit', () => {
 })
 
 void app.whenReady().then(async () => {
-  const settings = await SettingsStore.load(join(app.getPath('userData'), 'settings.json'))
+  const settingsFile = join(app.getPath('userData'), 'settings.json')
+  await migrateLegacySettings(settingsFile, join(app.getPath('appData'), LEGACY_USER_DATA_FOLDER, 'settings.json'))
+  const settings = await SettingsStore.load(settingsFile)
   denyAllPermissions()
   registerIpcHandlers(settings)
 

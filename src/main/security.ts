@@ -24,7 +24,7 @@ export function hardenWebContents(contents: WebContents): void {
   })
 }
 
-/** mdpad needs no camera, microphone, notifications or other web permissions. */
+/** Lantern needs no camera, microphone, notifications or other web permissions. */
 export function denyAllPermissions(): void {
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => {
     callback(false)

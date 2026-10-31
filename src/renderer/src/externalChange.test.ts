@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { decideExternalChange } from './externalChange'
 
 describe('decideExternalChange', () => {
-  it('ignores a change that brings nothing new, such as mdpad’s own save', () => {
+  it('ignores a change that brings nothing new, such as Lantern’s own save', () => {
     expect(decideExternalChange({ content: 'a', savedContent: 'a' }, 'a')).toBe('ignore')
     expect(decideExternalChange({ content: 'a b', savedContent: 'a' }, 'a')).toBe('ignore')
   })

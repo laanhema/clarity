@@ -47,7 +47,7 @@ const processor = unified()
 
 /**
  * Turns Markdown into a sanitized HTML tree (hast). Untrusted input stops
- * here: everything later only adds markup that mdpad generates itself.
+ * here: everything later only adds markup that Lantern generates itself.
  */
 export function markdownToSafeTree(markdown: string): Root {
   const mdast = processor.parse(markdown)

@@ -5,7 +5,7 @@ import {
   IpcChannel,
   MENU_COMMANDS,
   THEME_SETTINGS,
-  type MdpadApi,
+  type LanternApi,
   type MenuCommand,
   type OpenedFolder,
   type ThemeSetting,
@@ -33,7 +33,7 @@ function initialTheme(): ThemeSetting {
   return THEME_SETTINGS.find((theme) => theme === value) ?? DEFAULT_UI_SETTINGS.theme
 }
 
-const api: MdpadApi = {
+const api: LanternApi = {
   initialTheme: initialTheme(),
   openFolder: () => invoke(IpcChannel.OpenFolder),
   openFile: () => invoke(IpcChannel.OpenFile),
@@ -65,4 +65,4 @@ const api: MdpadApi = {
   onTreeChanged: (listener) => subscribe(IpcChannel.TreeChanged, () => listener()),
 }
 
-contextBridge.exposeInMainWorld('mdpad', api)
+contextBridge.exposeInMainWorld('lantern', api)

@@ -136,7 +136,7 @@ describe('unsaved changes', () => {
   it('does not switch when saving fails, and shows the error', async () => {
     const user = await openFirstFileAndEdit()
     mock.api.confirmUnsaved.mockResolvedValue('save')
-    mock.api.writeFile.mockRejectedValue(new Error("Error invoking remote method 'mdpad:write-file': Error: Disk full"))
+    mock.api.writeFile.mockRejectedValue(new Error("Error invoking remote method 'lantern:write-file': Error: Disk full"))
     await user.click(screen.getByRole('button', { name: /second\.md/ }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Disk full')
@@ -540,7 +540,7 @@ describe('font and font size', () => {
     document.documentElement.style.removeProperty('--content-size')
   })
 
-  // Everything mdpad draws: the sidebar, the editor, the preview and its code, and the status bar.
+  // Everything Lantern draws: the sidebar, the editor, the preview and its code, and the status bar.
   const appParts = () => [
     document.querySelector('.sidebar-open'),
     editorScroller(),

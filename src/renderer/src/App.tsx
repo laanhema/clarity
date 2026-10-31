@@ -57,7 +57,7 @@ const NEXT_THEME: Record<ThemeSetting, ThemeSetting> = {
 }
 
 export function App() {
-  const api = window.mdpad
+  const api = window.lantern
   const [folder, setFolder] = useState<OpenedFolder | null>(null)
   const [doc, setDoc] = useState<DocumentState>(NEW_DOCUMENT)
   const [message, setMessage] = useState<string | null>(null)
@@ -83,7 +83,7 @@ export function App() {
   }, [api, dirty])
 
   useEffect(() => {
-    document.title = `${dirty ? '● ' : ''}${name} — mdpad`
+    document.title = `${dirty ? '● ' : ''}${name} — Lantern`
   }, [dirty, name])
 
   useEffect(() => {

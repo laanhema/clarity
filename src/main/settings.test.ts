@@ -6,6 +6,7 @@ import {
   MAX_RECENT_FOLDERS,
   SettingsStore,
   addRecentFolder,
+  migrateLegacySettings,
   parseSettings,
   pruneRecentFolders,
   sanitizeUiPatch,
@@ -161,5 +162,50 @@ describe('SettingsStore', () => {
     }
     await store.flush()
     expect((await SettingsStore.load(file)).current.ui.sidebarWidth).toBe(220)
+  })
+})
+
+describe('migrateLegacySettings', () => {
+  let root: string
+  let legacy: string
+  let current: string
+  const legacyContent = `${JSON.stringify({ ui: { theme: 'light', fontSize: 18 }, recentFolders: ['/notes'] })}\n`
+
+  beforeEach(async () => {
+    root = await makeTempDir()
+    legacy = path.join(root, 'mdpad', 'settings.json')
+    current = path.join(root, 'lantern', 'settings.json')
+    await mkdir(path.dirname(legacy), { recursive: true })
+    await writeFile(legacy, legacyContent)
+  })
+
+  afterEach(() => removeDir(root))
+
+  it('copies the old settings once when the new folder has none', async () => {
+    expect(await migrateLegacySettings(current, legacy)).toBe(true)
+    expect(await readFile(current, 'utf8')).toBe(legacyContent)
+    const store = await SettingsStore.load(current)
+    expect(store.current.ui.theme).toBe('light')
+    expect(store.current.ui.fontSize).toBe(18)
+    expect(store.current.recentFolders).toEqual(['/notes'])
+
+    await writeFile(current, '{}\n')
+    expect(await migrateLegacySettings(current, legacy)).toBe(false)
+    expect(await readFile(current, 'utf8')).toBe('{}\n')
+    expect(await readFile(legacy, 'utf8')).toBe(legacyContent)
+  })
+
+  it('leaves existing new settings alone', async () => {
+    await mkdir(path.dirname(current), { recursive: true })
+    await writeFile(current, '{"ui":{"theme":"dark"}}\n')
+    expect(await migrateLegacySettings(current, legacy)).toBe(false)
+    expect(await readFile(current, 'utf8')).toBe('{"ui":{"theme":"dark"}}\n')
+    expect(await readFile(legacy, 'utf8')).toBe(legacyContent)
+  })
+
+  it('does nothing when there are no old settings', async () => {
+    const missing = path.join(root, 'none', 'settings.json')
+    expect(await migrateLegacySettings(current, missing)).toBe(false)
+    await expect(readFile(current, 'utf8')).rejects.toThrow()
   })
 })

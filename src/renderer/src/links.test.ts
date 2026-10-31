@@ -12,7 +12,7 @@ describe('routeLink', () => {
   })
 
   it('ignores other schemes', () => {
-    for (const href of ['javascript:alert(1)', 'file:///etc/passwd', 'mailto:a@b.c', 'data:text/html,x', 'mdpad:x', 'ftp://x']) {
+    for (const href of ['javascript:alert(1)', 'file:///etc/passwd', 'mailto:a@b.c', 'data:text/html,x', 'lantern:x', 'ftp://x']) {
       expect(route(href)).toEqual({ kind: 'ignore' })
     }
   })

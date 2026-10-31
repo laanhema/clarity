@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 /** A throwaway directory for file-system tests, as a real path. */
-export async function makeTempDir(prefix = 'mdpad-test-'): Promise<string> {
+export async function makeTempDir(prefix = 'lantern-test-'): Promise<string> {
   return realpath(await mkdtemp(path.join(tmpdir(), prefix)))
 }
 

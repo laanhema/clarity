@@ -21,7 +21,7 @@
   --editor-match-selected: rgba(234, 179, 8, 0.55);
   --code-bg: #f6f8fa;
   /*
-   * The Font setting: one typeface for everything mdpad draws, in every theme.
+   * The Font setting: one typeface for everything Lantern draws, in every theme.
    * The app sets data-font on this element; Commit Mono is the default.
    */
   --font-app: 'Commit Mono', ui-monospace, monospace;
@@ -179,7 +179,7 @@ button {
   color: inherit;
 }
 
-/* The browser gives these its own monospace; mdpad uses the app font everywhere. */
+/* The browser gives these its own monospace; Lantern uses the app font everywhere. */
 pre,
 code,
 kbd,

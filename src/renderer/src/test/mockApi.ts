@@ -2,7 +2,7 @@ import { act } from '@testing-library/react'
 import { vi } from 'vitest'
 import {
   DEFAULT_UI_SETTINGS,
-  type MdpadApi,
+  type LanternApi,
   type MenuCommand,
   type OpenedFolder,
   type ThemeSetting,
@@ -22,7 +22,7 @@ function listenerSet<T extends unknown[]>() {
   }
 }
 
-/** Installs a fake `window.mdpad` whose calls tests can inspect and steer. */
+/** Installs a fake `window.lantern` whose calls tests can inspect and steer. */
 export function installMockApi() {
   const menu = listenerSet<[MenuCommand]>()
   const close = listenerSet<[]>()
@@ -33,30 +33,30 @@ export function installMockApi() {
 
   const api = {
     initialTheme: 'system' as ThemeSetting,
-    openFolder: vi.fn<MdpadApi['openFolder']>().mockResolvedValue(null),
-    openFile: vi.fn<MdpadApi['openFile']>().mockResolvedValue(null),
-    listMarkdownFiles: vi.fn<MdpadApi['listMarkdownFiles']>().mockResolvedValue([]),
-    readFile: vi.fn<MdpadApi['readFile']>().mockResolvedValue(''),
-    writeFile: vi.fn<MdpadApi['writeFile']>().mockResolvedValue(undefined),
-    saveAs: vi.fn<MdpadApi['saveAs']>().mockResolvedValue(null),
-    confirmUnsaved: vi.fn<MdpadApi['confirmUnsaved']>().mockResolvedValue('cancel'),
-    confirmReload: vi.fn<MdpadApi['confirmReload']>().mockResolvedValue('keep'),
-    setDocumentDirty: vi.fn<MdpadApi['setDocumentDirty']>(),
-    closeWindow: vi.fn<MdpadApi['closeWindow']>(),
-    watchDocument: vi.fn<MdpadApi['watchDocument']>().mockResolvedValue(undefined),
-    loadImage: vi.fn<MdpadApi['loadImage']>().mockResolvedValue(null),
-    openExternal: vi.fn<MdpadApi['openExternal']>(),
-    getSettings: vi.fn<MdpadApi['getSettings']>().mockResolvedValue(DEFAULT_UI_SETTINGS),
-    updateSettings: vi.fn<MdpadApi['updateSettings']>(),
-    onMenuCommand: vi.fn<MdpadApi['onMenuCommand']>(menu.subscribe),
-    onCloseRequested: vi.fn<MdpadApi['onCloseRequested']>(close.subscribe),
-    onSettingsChanged: vi.fn<MdpadApi['onSettingsChanged']>(settings.subscribe),
-    onFolderOpened: vi.fn<MdpadApi['onFolderOpened']>(folderOpened.subscribe),
-    onDocumentChanged: vi.fn<MdpadApi['onDocumentChanged']>(documentChanged.subscribe),
-    onTreeChanged: vi.fn<MdpadApi['onTreeChanged']>(treeChanged.subscribe),
-  } satisfies MdpadApi
+    openFolder: vi.fn<LanternApi['openFolder']>().mockResolvedValue(null),
+    openFile: vi.fn<LanternApi['openFile']>().mockResolvedValue(null),
+    listMarkdownFiles: vi.fn<LanternApi['listMarkdownFiles']>().mockResolvedValue([]),
+    readFile: vi.fn<LanternApi['readFile']>().mockResolvedValue(''),
+    writeFile: vi.fn<LanternApi['writeFile']>().mockResolvedValue(undefined),
+    saveAs: vi.fn<LanternApi['saveAs']>().mockResolvedValue(null),
+    confirmUnsaved: vi.fn<LanternApi['confirmUnsaved']>().mockResolvedValue('cancel'),
+    confirmReload: vi.fn<LanternApi['confirmReload']>().mockResolvedValue('keep'),
+    setDocumentDirty: vi.fn<LanternApi['setDocumentDirty']>(),
+    closeWindow: vi.fn<LanternApi['closeWindow']>(),
+    watchDocument: vi.fn<LanternApi['watchDocument']>().mockResolvedValue(undefined),
+    loadImage: vi.fn<LanternApi['loadImage']>().mockResolvedValue(null),
+    openExternal: vi.fn<LanternApi['openExternal']>(),
+    getSettings: vi.fn<LanternApi['getSettings']>().mockResolvedValue(DEFAULT_UI_SETTINGS),
+    updateSettings: vi.fn<LanternApi['updateSettings']>(),
+    onMenuCommand: vi.fn<LanternApi['onMenuCommand']>(menu.subscribe),
+    onCloseRequested: vi.fn<LanternApi['onCloseRequested']>(close.subscribe),
+    onSettingsChanged: vi.fn<LanternApi['onSettingsChanged']>(settings.subscribe),
+    onFolderOpened: vi.fn<LanternApi['onFolderOpened']>(folderOpened.subscribe),
+    onDocumentChanged: vi.fn<LanternApi['onDocumentChanged']>(documentChanged.subscribe),
+    onTreeChanged: vi.fn<LanternApi['onTreeChanged']>(treeChanged.subscribe),
+  } satisfies LanternApi
 
-  window.mdpad = api
+  window.lantern = api
 
   return {
     api,

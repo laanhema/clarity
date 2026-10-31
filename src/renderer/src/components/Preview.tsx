@@ -54,7 +54,7 @@ function PreviewImage({ src, alt, ...rest }: ComponentProps<'img'>) {
   useEffect(() => {
     if (!request || !documentPath) return
     let cancelled = false
-    window.mdpad.loadImage(documentPath, source).then(
+    window.lantern.loadImage(documentPath, source).then(
       (url) => {
         if (!cancelled) setLoaded({ request, url })
       },
@@ -167,7 +167,7 @@ export function Preview({
     const target = routeLink(anchor.getAttribute('href'), documentPath, folderPath)
     switch (target.kind) {
       case 'external':
-        return window.mdpad.openExternal(target.url)
+        return window.lantern.openExternal(target.url)
       case 'document':
         return onOpenDocument(target.path)
       case 'anchor': {

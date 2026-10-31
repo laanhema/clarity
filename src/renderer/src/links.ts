@@ -6,7 +6,7 @@ export type LinkTarget =
   | { kind: 'external'; url: string }
   /** Scroll the preview to the element with this id (as written in the document, without the sanitizer's prefix). */
   | { kind: 'anchor'; id: string }
-  /** Open this Markdown file of the open folder in mdpad. */
+  /** Open this Markdown file of the open folder in Lantern. */
   | { kind: 'document'; path: string }
   | { kind: 'ignore' }
 
@@ -54,7 +54,7 @@ function decode(text: string): string | null {
  * Decides what a link in the preview does:
  * - `http:` and `https:` links open in the system browser;
  * - `#id` scrolls to that part of the preview;
- * - a relative link to a `.md` or `.markdown` file inside the open folder opens it in mdpad
+ * - a relative link to a `.md` or `.markdown` file inside the open folder opens it in Lantern
  *   (the main process checks the path again before reading it);
  * - everything else — other schemes, other file types, files outside the folder — does nothing.
  */
