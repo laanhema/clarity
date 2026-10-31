@@ -554,6 +554,36 @@ button {
   font-size: 0.9em;
 }
 
+.markdown-body .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.markdown-body .mermaid-diagram {
+  margin: 0 0 16px;
+  overflow-x: auto;
+}
+
+.markdown-body .mermaid-pending {
+  color: var(--fg-muted);
+}
+
+.markdown-body .mermaid-error {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  color: var(--danger);
+}
+
+.markdown-body .mermaid-error pre {
+  margin: 6px 0 0;
+  padding: 0;
+  background: none;
+  color: var(--fg);
+  white-space: pre-wrap;
+}
+
 /*
  * Shiki colours each token with every theme as CSS variables
  * (--shiki-light, --shiki-dark, --shiki-gruvbox, --shiki-tokyo); the active theme picks one set.

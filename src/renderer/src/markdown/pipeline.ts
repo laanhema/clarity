@@ -3,6 +3,7 @@ import rehypeRaw from 'rehype-raw'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import remarkFrontmatter from 'remark-frontmatter'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
 import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
@@ -29,6 +30,8 @@ const processor = unified()
   // YAML frontmatter, recognised only at the very start of the document, as on GitHub.
   .use(remarkFrontmatter, ['yaml'])
   .use(remarkGfm)
+  // `$inline$` and `$$display$$` math become `<code class="language-math">`, as a ```math fence does.
+  .use(remarkMath)
   // Raw HTML in the Markdown is parsed into the tree here and cleaned by the next two steps.
   // Footnote ids get their prefix from the sanitizer, like every other id.
   .use(remarkRehype, {
@@ -69,12 +72,13 @@ function textOf(node: ElementContent): string {
 
 interface CodeBlock {
   pre: Element
-  language: string
+  /** The fence's language as written, lowercased; empty when it has none. */
+  info: string
   code: string
 }
 
-/** Finds `<pre><code class="language-x">` blocks whose language has a grammar. */
-function findCodeBlocks(tree: Root): CodeBlock[] {
+/** Finds `<pre><code>` blocks, with the language of their `language-x` class. */
+function findPreCode(tree: Root): CodeBlock[] {
   const blocks: CodeBlock[] = []
   const visit = (nodes: (RootContent | ElementContent)[]) => {
     for (const node of nodes) {
@@ -83,8 +87,8 @@ function findCodeBlocks(tree: Root): CodeBlock[] {
       if (code?.type === 'element' && code.tagName === 'code') {
         const classes = Array.isArray(code.properties['className']) ? code.properties['className'] : []
         const languageClass = classes.find((name) => typeof name === 'string' && name.startsWith('language-'))
-        const language = typeof languageClass === 'string' ? grammarFor(languageClass.slice('language-'.length)) : null
-        if (language) blocks.push({ pre: node, language, code: textOf(code).replace(/\n$/, '') })
+        const info = typeof languageClass === 'string' ? languageClass.slice('language-'.length).toLowerCase() : ''
+        blocks.push({ pre: node, info, code: textOf(code).replace(/\n$/, '') })
         continue
       }
       visit(node.children)
@@ -92,6 +96,14 @@ function findCodeBlocks(tree: Root): CodeBlock[] {
   }
   visit(tree.children)
   return blocks
+}
+
+/** The code blocks whose language has a grammar, with the grammar name. */
+function findCodeBlocks(tree: Root): (CodeBlock & { language: string })[] {
+  return findPreCode(tree).flatMap((block) => {
+    const language = block.info ? grammarFor(block.info) : null
+    return language ? [{ ...block, language }] : []
+  })
 }
 
 /** The grammar names that `tree` needs for its code blocks. */
@@ -115,9 +127,45 @@ export function highlightCodeBlocks(tree: Root, highlighter: CodeHighlighter): R
   return tree
 }
 
-/** The full preview pipeline: sanitize, then colour code blocks once their grammars have loaded. */
+/** The class of the placeholder that the preview renders a Mermaid diagram into. */
+export const MERMAID_CLASS = 'mermaid-diagram'
+
+/**
+ * Replaces ```mermaid blocks with an empty `<div class="mermaid-diagram">`
+ * that carries the diagram's source as text in `data-mermaid`, in place.
+ * Runs on an already sanitized tree, which cannot contain that class, so the
+ * preview only ever renders diagrams this step made.
+ */
+export function prepareMermaidBlocks(tree: Root): Root {
+  for (const block of findPreCode(tree)) {
+    if (block.info !== 'mermaid') continue
+    block.pre.tagName = 'div'
+    block.pre.properties = { className: [MERMAID_CLASS], dataMermaid: block.code }
+    block.pre.children = []
+  }
+  return tree
+}
+
+/** Whether `tree` has math for KaTeX: `<code class="language-math">`, inline or in a `<pre>`. */
+export function hasMath(tree: Root): boolean {
+  const visit = (nodes: (RootContent | ElementContent)[]): boolean =>
+    nodes.some((node) => {
+      if (node.type !== 'element') return false
+      const classes = node.properties['className']
+      if (node.tagName === 'code' && Array.isArray(classes) && classes.includes('language-math')) return true
+      return visit(node.children)
+    })
+  return visit(tree.children)
+}
+
+/**
+ * The full preview pipeline: sanitize, mark Mermaid diagrams, typeset math
+ * and colour code blocks. KaTeX and the grammars load the first time a
+ * document needs them.
+ */
 export async function renderMarkdown(markdown: string): Promise<Root> {
-  const tree = markdownToSafeTree(markdown)
+  const tree = prepareMermaidBlocks(markdownToSafeTree(markdown))
+  if (hasMath(tree)) (await import('./math')).typesetMath(tree)
   const languages = codeLanguages(tree)
   if (languages.size === 0) return tree
   return highlightCodeBlocks(tree, await loadHighlighter(languages))

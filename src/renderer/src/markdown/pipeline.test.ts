@@ -1,9 +1,33 @@
+import type { ElementContent, Root, RootContent } from 'hast'
 import { toHtml } from 'hast-util-to-html'
 import { describe, expect, it } from 'vitest'
 import { grammarFor } from './highlighter'
-import { codeLanguages, highlightCodeBlocks, markdownToSafeTree, renderMarkdown } from './pipeline'
+import {
+  codeLanguages,
+  hasMath,
+  highlightCodeBlocks,
+  markdownToSafeTree,
+  MERMAID_CLASS,
+  prepareMermaidBlocks,
+  renderMarkdown,
+} from './pipeline'
 
 const html = (markdown: string) => toHtml(markdownToSafeTree(markdown))
+
+/** Every element in `tree` as `tag` plus one `tag attribute=value` entry per attribute. */
+function elementsOf(tree: Root): string[] {
+  const out: string[] = []
+  const visit = (nodes: (RootContent | ElementContent)[]) => {
+    for (const node of nodes) {
+      if (node.type !== 'element') continue
+      out.push(node.tagName)
+      for (const [name, value] of Object.entries(node.properties)) out.push(`${node.tagName} ${name}=${String(value)}`)
+      visit(node.children)
+    }
+  }
+  visit(tree.children)
+  return out
+}
 
 describe('sanitizing', () => {
   it('drops script tags and their content', () => {
@@ -240,5 +264,89 @@ describe('YAML frontmatter', () => {
     expect(out).toContain('id="user-content-part"')
     expect(out).toContain('href="#part"')
     expect(out).toContain('id="user-content-fn-1"')
+  })
+})
+
+describe('math', () => {
+  it('typesets inline math with KaTeX', async () => {
+    const out = toHtml(await renderMarkdown('Euler: $e^{i\\pi} + 1 = 0$ done'))
+    expect(out).toMatch(/<p>Euler: <span class="katex">/)
+    expect(out).toContain('<annotation encoding="application/x-tex">e^{i\\pi} + 1 = 0</annotation>')
+    expect(out).not.toContain('katex-display')
+    expect(out).toContain('done</p>')
+  })
+
+  it('typesets display math, from $$ blocks and ```math fences', async () => {
+    for (const markdown of ['$$\n\\int_0^1 x\\,dx\n$$', '```math\n\\int_0^1 x\\,dx\n```']) {
+      const out = toHtml(await renderMarkdown(markdown))
+      expect(out).toMatch(/^<span class="katex-display"><span class="katex">/)
+      expect(out).not.toContain('<pre')
+    }
+  })
+
+  it('shows a formula KaTeX cannot parse as an error, not as markup', async () => {
+    const out = toHtml(await renderMarkdown('$\\frac{1}{$'))
+    expect(out).toContain('katex-error')
+  })
+
+  it('keeps text without math as it was', async () => {
+    const tree = markdownToSafeTree('Just text and `code`.')
+    expect(hasMath(tree)).toBe(false)
+    expect(toHtml(await renderMarkdown('Just text and `code`.'))).toBe('<p>Just text and <code>code</code>.</p>')
+  })
+
+  it('neutralizes scripts, handlers and links inside math', async () => {
+    const tree = await renderMarkdown(
+      [
+        '$<script>alert(1)</script>$',
+        '$<img src=x onerror=alert(2)>$',
+        '$\\href{javascript:alert(3)}{x}$ $\\url{https://example.com}$',
+        '$\\htmlClass{shiki}{x}\\htmlStyle{position:fixed}{y}\\htmlId{root}{z}$',
+        '$$\n\\includegraphics{https://example.com/x.png}\n$$',
+      ].join('\n\n'),
+    )
+    const elements = elementsOf(tree)
+    expect(elements).toContain('span className=katex')
+    const unsafe = /^(script|img|a|image)\b| (on\w+|href|src|id)=|javascript:|position:fixed|shiki/i
+    expect(elements.filter((entry) => unsafe.test(entry))).toEqual([])
+  })
+})
+
+describe('Mermaid', () => {
+  const diagram = 'graph TD\n  A[Start] --> B{Ok?}'
+
+  it('turns a mermaid fence into a diagram placeholder, not a code block', async () => {
+    const out = toHtml(await renderMarkdown(`\`\`\`mermaid\n${diagram}\n\`\`\``))
+    expect(out).toBe(`<div class="${MERMAID_CLASS}" data-mermaid="graph TD\n  A[Start] --> B{Ok?}"></div>`)
+    expect(out).not.toMatch(/<pre|shiki/)
+  })
+
+  it('leaves other code blocks alone', () => {
+    const tree = prepareMermaidBlocks(markdownToSafeTree('```js\nx\n```\n\n```\ngraph TD\n```'))
+    expect(toHtml(tree)).not.toContain(MERMAID_CLASS)
+  })
+
+  it('keeps a script or handler in the diagram source as text', async () => {
+    const source = 'graph TD\n  A["<img src=x onerror=alert(1)>"] --> B["<script>alert(2)</script>"]'
+    const tree = await renderMarkdown(`\`\`\`mermaid\n${source}\n\`\`\``)
+    // One empty element; the source is only an attribute's text, which React escapes.
+    expect(elementsOf(tree)).toEqual(['div', `div className=${MERMAID_CLASS}`, `div dataMermaid=${source}`])
+  })
+
+  it('cannot be faked with raw HTML', async () => {
+    const out = toHtml(await renderMarkdown(`<div class="${MERMAID_CLASS}" data-mermaid="graph TD">x</div>`))
+    expect(out).not.toMatch(/mermaid/)
+  })
+})
+
+describe('frontmatter, math and Mermaid together', () => {
+  it('renders each in one document', async () => {
+    const out = toHtml(
+      await renderMarkdown('---\nprice: $5 and $10\n---\n\nArea $\\pi r^2$.\n\n```mermaid\ngraph TD\n  A --> B\n```'),
+    )
+    expect(out).toMatch(/^<div class="frontmatter">/)
+    expect(out).toContain('$5 and $10')
+    expect(out.match(/class="katex"/g)).toHaveLength(1)
+    expect(out).toContain(`<div class="${MERMAID_CLASS}" data-mermaid="graph TD\n  A --> B"></div>`)
   })
 })

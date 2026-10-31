@@ -2,8 +2,9 @@ import { toJsxRuntime, type Components } from 'hast-util-to-jsx-runtime'
 import { createContext, use, useEffect, useMemo, useRef, useState, type ComponentProps, type MouseEvent } from 'react'
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
 import { routeLink } from '../links'
-import { ID_PREFIX } from '../markdown/pipeline'
+import { ID_PREFIX, MERMAID_CLASS } from '../markdown/pipeline'
 import { useRenderedMarkdown } from '../markdown/useRenderedMarkdown'
+import { MermaidDiagram } from './MermaidDiagram'
 
 export interface PreviewProps {
   markdown: string
@@ -66,7 +67,13 @@ function PreviewImage({ src, alt, ...rest }: ComponentProps<'img'>) {
   return <img {...rest} src={loaded.url} alt={alt} />
 }
 
-const components: Partial<Components> = { img: PreviewImage }
+/** The placeholders the pipeline makes for ```mermaid blocks become diagrams; other divs stay divs. */
+function PreviewDiv({ 'data-mermaid': mermaid, ...rest }: ComponentProps<'div'> & { 'data-mermaid'?: string }) {
+  if (rest.className === MERMAID_CLASS && typeof mermaid === 'string') return <MermaidDiagram source={mermaid} />
+  return <div {...rest} />
+}
+
+const components: Partial<Components> = { img: PreviewImage, div: PreviewDiv }
 
 /** The rendered, sanitized Markdown preview. */
 export function Preview({ markdown, documentKey, documentPath, folderPath, hidden = false, onOpenDocument }: PreviewProps) {
