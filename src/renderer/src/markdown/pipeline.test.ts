@@ -317,6 +317,62 @@ describe('math', () => {
   })
 })
 
+describe('dollar signs in prose', () => {
+  // Lines 9 and 10 of the update-rules skill, verbatim: the bare `$` used to open
+  // math that the `$` inside the code span closed.
+  const UPDATE_RULES = [
+    '**Input**: $ARGUMENTS',
+    'Optional path to one rules file, which limits the run to that file. When the skill runner cannot pass arguments (the loaded content shows a literal `$ARGUMENTS`), take the path from the invoking prompt; if none, the run covers every rules file of the repository (Phase 1).',
+  ].join('\n')
+
+  it('keeps a bare $ paired with a $ inside a code span as text', async () => {
+    expect(hasMath(markdownToSafeTree(UPDATE_RULES))).toBe(false)
+    const out = toHtml(await renderMarkdown(UPDATE_RULES))
+    expect(out).not.toContain('katex')
+    expect(out).toContain('<strong>Input</strong>: $ARGUMENTS\nOptional path')
+    expect(out).toContain('a literal <code>$ARGUMENTS</code>), take the path')
+    expect(html('a $a `b$ c` d')).toBe('<p>a $a <code>b$ c</code> d</p>')
+  })
+
+  it('keeps prices and shell variables as text', () => {
+    for (const markdown of [
+      'costs $5 and $10 total',
+      'from $5.00 to $10.00',
+      'run $HOME and $PATH now',
+      'a $x $ b',
+      'a $ x$ b',
+      'between $1 and $2,000',
+      'a $x$5 b',
+    ]) {
+      expect(html(markdown)).toBe(`<p>${markdown}</p>`)
+    }
+  })
+
+  it('still finds math after a lone dollar, as Pandoc does', () => {
+    expect(html('a $5 or $x$ b')).toBe('<p>a $5 or <code class="language-math">x</code> b</p>')
+    expect(html('$x$, and $y_2$.')).toBe(
+      '<p><code class="language-math">x</code>, and <code class="language-math">y_2</code>.</p>',
+    )
+  })
+
+  it('lets a backslash escape a dollar inside and before math', () => {
+    expect(html('a $x\\$y$ b')).toBe('<p>a <code class="language-math">x\\$y</code> b</p>')
+    expect(html('a \\$x$ b')).toBe('<p>a $x$ b</p>')
+  })
+
+  it('keeps inline math over line breaks and with emphasis characters inside', () => {
+    expect(html('a $x\ny$ b')).toBe('<p>a <code class="language-math">x\ny</code> b</p>')
+    expect(html('a $x*y*z$ b')).toBe('<p>a <code class="language-math">x*y*z</code> b</p>')
+  })
+
+  it('keeps $$ math, inline and as a block', async () => {
+    expect(html('see $$x$$ here')).toBe('<p>see <code class="language-math">x</code> here</p>')
+    const out = toHtml(await renderMarkdown('Price $5 and $10.\n\n$$\na+b\n$$'))
+    expect(out).toContain('Price $5 and $10.</p>')
+    expect(out).toContain('katex-display')
+  })
+})
+
 describe('Mermaid', () => {
   const diagram = 'graph TD\n  A[Start] --> B{Ok?}'
 

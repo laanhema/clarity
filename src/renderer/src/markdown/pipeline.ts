@@ -7,6 +7,7 @@ import remarkMath from 'remark-math'
 import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
+import { remarkDollarMath } from './dollarMath'
 import { frontmatterTree } from './frontmatter'
 import { grammarFor, loadHighlighter, type CodeHighlighter } from './highlighter'
 
@@ -31,7 +32,9 @@ const processor = unified()
   .use(remarkFrontmatter, ['yaml'])
   .use(remarkGfm)
   // `$inline$` and `$$display$$` math become `<code class="language-math">`, as a ```math fence does.
-  .use(remarkMath)
+  // Single dollars follow Pandoc's rule, so `$5 and $10` and `$HOME` stay text (see dollarMath.ts).
+  .use(remarkMath, { singleDollarTextMath: false })
+  .use(remarkDollarMath)
   // Raw HTML in the Markdown is parsed into the tree here and cleaned by the next two steps.
   // Footnote ids get their prefix from the sanitizer, like every other id.
   .use(remarkRehype, {
