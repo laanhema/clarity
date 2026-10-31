@@ -2,7 +2,6 @@
   color-scheme: light dark;
   --bg: #ffffff;
   --bg-sidebar: #f5f6f8;
-  --bg-status: #eceef1;
   --bg-hover: rgba(0, 0, 0, 0.05);
   --bg-active: rgba(46, 107, 230, 0.12);
   --fg: #1f2328;
@@ -42,7 +41,6 @@
   :root {
     --bg: #1e1f22;
     --bg-sidebar: #191a1c;
-    --bg-status: #161718;
     --bg-hover: rgba(255, 255, 255, 0.06);
     --bg-active: rgba(110, 158, 255, 0.18);
     --fg: #e3e5e8;
@@ -68,14 +66,13 @@
  * Gruvbox Material Dark Hard (sainnhe/gruvbox-material: background "hard",
  * foreground "material") with an orange accent.
  * The main process puts the window in dark mode for it, so anything this
- * block leaves out keeps its dark value. Its layout (floating panels,
- * headings in the Title colour) is at the end of this file.
+ * block leaves out keeps its dark value. Its headings in the Title colour
+ * are at the end of this file.
  */
 :root[data-theme='gruvbox-material-dark-hard'] {
   color-scheme: dark;
   --bg: #1d2021;
   --bg-sidebar: #141617;
-  --bg-status: #282828;
   --bg-hover: #282828;
   --bg-active: color-mix(in srgb, #e78a4e 24%, transparent);
   --fg: #d4be98;
@@ -115,14 +112,13 @@
 
 /*
  * Tokyo Night Moon (folke/tokyonight.nvim, style "moon") with its blue Title
- * accent and the same layout as Gruvbox Material Dark Hard. Like
+ * accent and the same preview colours as Gruvbox Material Dark Hard. Like
  * that theme it runs the window in dark mode.
  */
 :root[data-theme='tokyo-night-moon'] {
   color-scheme: dark;
   --bg: #222436;
   --bg-sidebar: #1e2030;
-  --bg-status: #1e2030;
   --bg-hover: #2f334d;
   --bg-active: color-mix(in srgb, #82aaff 24%, transparent);
   --fg: #c8d3f5;
@@ -214,17 +210,30 @@ samp {
   height: 100%;
 }
 
-/* Columns are set inline from the view mode and the saved pane sizes. */
+/*
+ * Floating panels: the sidebar and panes are rounded cards on the darker
+ * sidebar tone, split by gaps instead of lines. Columns are set inline from
+ * the view mode and the saved pane sizes.
+ */
 .workspace {
   flex: 1;
   min-height: 0;
   display: grid;
   grid-template-rows: minmax(0, 1fr);
+  padding: 6px 6px 0;
+  background: var(--bg-sidebar);
+}
+
+.sidebar,
+.pane {
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg);
 }
 
 .splitter {
   position: relative;
-  background: var(--border);
+  background: transparent;
   cursor: col-resize;
   touch-action: none;
 }
@@ -238,7 +247,7 @@ samp {
 
 .splitter:hover,
 .splitter:focus-visible {
-  background: var(--accent);
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
   outline: none;
 }
 
@@ -248,7 +257,6 @@ samp {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--bg-sidebar);
 }
 
 .sidebar-header {
@@ -388,7 +396,7 @@ samp {
 
 .preview-pane {
   overflow: auto;
-  padding: 20px 28px 40px;
+  padding: 12px 18px 40px;
 }
 
 /* Preview: GitHub-like Markdown styles */
@@ -680,9 +688,9 @@ samp {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 3px 10px;
-  background: var(--bg-status);
-  border-top: 1px solid var(--border);
+  padding: 2px 8px;
+  background: var(--bg-sidebar);
+  border-top: 1px solid transparent;
   color: var(--fg-status, var(--fg-muted));
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -770,40 +778,10 @@ samp {
 }
 
 /*
- * Layout shared by the custom themes (Gruvbox Material Dark Hard and Tokyo
- * Night Moon): floating panels on the darker base and headings in the Title
- * colour. Each theme's colours are in its variable block at the top.
+ * Preview colours shared by the custom themes (Gruvbox Material Dark Hard and
+ * Tokyo Night Moon): headings in the Title colour. Each theme's colours are in
+ * its variable block at the top.
  */
-
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .workspace {
-  padding: 6px 6px 0;
-  background: var(--bg-sidebar);
-}
-
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .splitter {
-  background: transparent;
-}
-
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) :is(.splitter:hover, .splitter:focus-visible) {
-  background: color-mix(in srgb, var(--accent) 45%, transparent);
-}
-
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) :is(.sidebar, .pane) {
-  overflow: hidden;
-  border-radius: 8px;
-  background: var(--bg);
-}
-
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .preview-pane {
-  overflow: auto;
-  padding: 12px 18px 40px;
-}
-
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .status-bar {
-  padding: 2px 8px;
-  border-top-color: transparent;
-  background: var(--bg-sidebar);
-}
 
 :is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h1 {
   color: var(--h1);
