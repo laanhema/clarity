@@ -577,6 +577,12 @@ describe('font and font size', () => {
     expect(sizeOf(editorScroller())).toBe('14px')
   })
 
+  it('wraps long lines in preview code blocks, keeping their spaces', () => {
+    const style = getComputedStyle(previewCode())
+    expect(style.whiteSpace).toBe('pre-wrap')
+    expect(style.overflowWrap).toBe('anywhere')
+  })
+
   it('keeps the same font in every theme', () => {
     for (const theme of ['light', 'dark', 'gruvbox-material-dark-hard', 'tokyo-night-moon'] as const) {
       mock.changeSettings({ ...DEFAULT_UI_SETTINGS, theme, font: 'jetbrains-mono-nl' })

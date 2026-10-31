@@ -485,6 +485,9 @@ samp {
 .markdown-body pre > code {
   /* 13px at the default size of 14px. */
   font-size: calc(var(--content-size) * 13 / 14);
+  /* Wrap long lines instead of scrolling; spaces and tabs stay as written, long tokens break anywhere. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .markdown-body table {
