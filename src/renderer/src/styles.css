@@ -327,9 +327,9 @@ samp {
   color: var(--fg-muted);
 }
 
-/* Shown only by themes with an icon tree. */
+/* Folder icons show in every theme; file icons only in themes with an icon tree. */
 .tree-icon {
-  display: none;
+  display: block;
   flex: none;
   width: 14px;
   height: 14px;
@@ -337,6 +337,10 @@ samp {
 
 .tree-file {
   padding-left: 26px;
+}
+
+.tree-file .tree-icon {
+  display: none;
 }
 
 .tree-file[aria-current='page'] {
@@ -793,10 +797,6 @@ samp {
   text-transform: uppercase;
 }
 
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree-icon {
-  display: block;
-}
-
 :is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree-row {
   gap: 6px;
   width: calc(100% - 12px);
@@ -814,6 +814,7 @@ samp {
 }
 
 :is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .tree-file .tree-icon {
+  display: block;
   color: var(--fg-muted);
 }
 

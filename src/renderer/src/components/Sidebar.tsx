@@ -26,7 +26,7 @@ function UnsavedDot() {
   )
 }
 
-/* Tree icons. styles.css shows them only in themes that use them. */
+/* Tree icons. styles.css shows folder icons in every theme, file icons only in themes that use them. */
 
 function FolderIcon({ open }: { open: boolean }) {
   return (
