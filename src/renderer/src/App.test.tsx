@@ -330,8 +330,9 @@ describe('view modes and settings', () => {
 
   it('cycles the theme from the status bar', async () => {
     const user = userEvent.setup()
+    mock.api.getSettings.mockResolvedValue({ ...DEFAULT_UI_SETTINGS, theme: 'system' })
     render(<App />)
-    await user.click(screen.getByRole('button', { name: 'System theme' }))
+    await user.click(await screen.findByRole('button', { name: 'System theme' }))
     expect(mock.api.updateSettings).toHaveBeenCalledWith({ theme: 'light' })
     expect(screen.getByRole('button', { name: 'Light theme' })).toBeInTheDocument()
   })
