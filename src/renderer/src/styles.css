@@ -106,8 +106,6 @@
   --code-bg: #282828;
   --inline-code-bg: #32302f;
   --inline-code-fg: #a9b665;
-  --editor-pad-y: 10px;
-  --editor-pad-x: 14px;
 }
 
 /*
@@ -152,8 +150,6 @@
   --code-bg: #1e2030;
   --inline-code-bg: #2f334d;
   --inline-code-fg: #c3e88d;
-  --editor-pad-y: 10px;
-  --editor-pad-x: 14px;
 }
 
 *,
