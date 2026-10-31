@@ -61,13 +61,22 @@ describe('parseSettings', () => {
     expect(settings.window).toEqual({ x: 10, y: 20, width: 900, height: 700, maximized: true })
   })
 
-  it("defaults to the theme's font at today's 14px size, and keeps saved font settings", () => {
-    expect(DEFAULT_UI_SETTINGS).toMatchObject({ font: 'theme', fontSize: 14 })
-    expect(parseSettings(JSON.stringify({ ui: { theme: 'dark' } })).ui).toMatchObject({ font: 'theme', fontSize: 14 })
-    expect(parseSettings(JSON.stringify({ ui: { font: 'serif', fontSize: 18 } })).ui).toMatchObject({
-      font: 'serif',
+  it('defaults to Commit Mono at 14px, and keeps saved font settings', () => {
+    expect(DEFAULT_UI_SETTINGS).toMatchObject({ font: 'commit-mono', fontSize: 14 })
+    expect(parseSettings(JSON.stringify({ ui: { theme: 'dark' } })).ui).toMatchObject({ font: 'commit-mono', fontSize: 14 })
+    expect(parseSettings(JSON.stringify({ ui: { font: 'jetbrains-mono-nl', fontSize: 18 } })).ui).toMatchObject({
+      font: 'jetbrains-mono-nl',
       fontSize: 18,
     })
+  })
+
+  it('moves a font saved by an older version to the default and keeps the size', () => {
+    for (const font of ['theme', 'sans', 'serif', 'mono']) {
+      expect(parseSettings(JSON.stringify({ ui: { font, fontSize: 18 } })).ui).toMatchObject({
+        font: 'commit-mono',
+        fontSize: 18,
+      })
+    }
   })
 
   it('rejects unusable window bounds', () => {
@@ -87,10 +96,11 @@ describe('sanitizeUiPatch', () => {
     expect(sanitizeUiPatch(null)).toEqual({})
   })
 
-  it('accepts the bundled and system font choices and clamps the font size', () => {
-    for (const font of ['theme', 'sans', 'serif', 'mono'] as const) {
+  it('accepts only the bundled fonts and clamps the font size', () => {
+    for (const font of ['jetbrains-mono-nl', 'commit-mono'] as const) {
       expect(sanitizeUiPatch({ font })).toEqual({ font })
     }
+    expect(sanitizeUiPatch({ font: 'mono' })).toEqual({})
     expect(sanitizeUiPatch({ font: 'Comic Sans MS' })).toEqual({})
     expect(sanitizeUiPatch({ font: 'https://fonts.example/font.woff2' })).toEqual({})
     expect(sanitizeUiPatch({ fontSize: 16.4 })).toEqual({ fontSize: 16 })

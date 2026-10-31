@@ -1,9 +1,12 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import '@fontsource-variable/inter/wght.css'
-import '@fontsource-variable/inter/wght-italic.css'
-import '@fontsource-variable/jetbrains-mono/wght.css'
-import '@fontsource-variable/jetbrains-mono/wght-italic.css'
+// The two fonts View → Font offers. The weights match what styles.css uses: text, headings (600) and bold.
+import '@fontsource/commit-mono/400.css'
+import '@fontsource/commit-mono/400-italic.css'
+import '@fontsource/commit-mono/600.css'
+import '@fontsource/commit-mono/700.css'
+import '@fontsource/commit-mono/700-italic.css'
+import './assets/fonts/jetbrains-mono-nl/jetbrains-mono-nl.css'
 import { App } from './App'
 import './styles.css'
 

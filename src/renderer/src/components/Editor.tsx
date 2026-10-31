@@ -32,7 +32,7 @@ export interface EditorProps {
 const editorTheme = EditorView.theme({
   '&': { flex: '1', minHeight: '0', backgroundColor: 'var(--bg)', color: 'var(--fg)' },
   '&.cm-focused': { outline: 'none' },
-  '.cm-scroller': { fontFamily: 'var(--font-editor)', fontSize: 'var(--editor-size)', lineHeight: 'var(--editor-lh)' },
+  '.cm-scroller': { fontFamily: 'var(--font-app)', fontSize: 'var(--editor-size)', lineHeight: 'var(--editor-lh)' },
   '.cm-content': { padding: 'var(--editor-pad-y) 0', caretColor: 'var(--fg)' },
   '.cm-line': { padding: '0 var(--editor-pad-x)' },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--fg)' },
@@ -45,7 +45,7 @@ const editorTheme = EditorView.theme({
   '.cm-placeholder': { color: 'var(--fg-muted)' },
   '.cm-panels': { backgroundColor: 'var(--bg-sidebar)', color: 'var(--fg)' },
   '.cm-panels.cm-panels-top': { borderBottom: '1px solid var(--border)' },
-  '.cm-panel.cm-search': { fontFamily: 'var(--font-ui)', padding: '6px 10px' },
+  '.cm-panel.cm-search': { fontFamily: 'var(--font-app)', padding: '6px 10px' },
   '.cm-panel.cm-search input, .cm-panel.cm-search button': { fontFamily: 'inherit', fontSize: '12px' },
   '.cm-textfield': {
     backgroundColor: 'var(--bg)',

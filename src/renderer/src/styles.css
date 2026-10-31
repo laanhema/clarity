@@ -20,14 +20,11 @@
   --editor-match: rgba(234, 179, 8, 0.25);
   --editor-match-selected: rgba(234, 179, 8, 0.55);
   --code-bg: #f6f8fa;
-  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
-  /* Fonts the Font setting offers: bundled Inter, or the system's serif. */
-  --font-sans: 'Inter Variable', 'Inter', system-ui, sans-serif;
-  --font-serif: 'Iowan Old Style', Charter, Georgia, Cambria, 'Noto Serif', 'DejaVu Serif', serif;
-  /* The reading and writing text. The Font setting replaces these through data-font. */
-  --font-editor: var(--font-mono);
-  --font-prose: var(--font-ui);
+  /*
+   * The Font setting: one typeface for everything mdpad draws, in every theme.
+   * The app sets data-font on this element; Commit Mono is the default.
+   */
+  --font-app: 'Commit Mono', ui-monospace, monospace;
   /* The Font Size setting, set on this element by the app. The preview scales from it. */
   --content-size: 14px;
   --editor-size: var(--content-size);
@@ -36,19 +33,8 @@
   --editor-pad-x: 20px;
 }
 
-:root[data-font='sans'] {
-  --font-editor: var(--font-sans);
-  --font-prose: var(--font-sans);
-}
-
-:root[data-font='serif'] {
-  --font-editor: var(--font-serif);
-  --font-prose: var(--font-serif);
-}
-
-:root[data-font='mono'] {
-  --font-editor: var(--font-mono);
-  --font-prose: var(--font-mono);
+:root[data-font='jetbrains-mono-nl'] {
+  --font-app: 'JetBrains Mono NL', ui-monospace, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -78,7 +64,7 @@
 
 /*
  * Gruvbox Material Dark Hard (sainnhe/gruvbox-material: background "hard",
- * foreground "material") with an orange accent, Inter and JetBrains Mono.
+ * foreground "material") with an orange accent.
  * The main process puts the window in dark mode for it, so anything this
  * block leaves out keeps its dark value. Its layout (floating panels, the
  * icon tree, compact spacing, headings in the Title colour) is at the end of this file.
@@ -121,15 +107,13 @@
   --code-bg: #282828;
   --inline-code-bg: #32302f;
   --inline-code-fg: #a9b665;
-  --font-ui: 'Inter Variable', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
   --editor-pad-y: 10px;
   --editor-pad-x: 14px;
 }
 
 /*
  * Tokyo Night Moon (folke/tokyonight.nvim, style "moon") with its blue Title
- * accent and the same fonts and layout as Gruvbox Material Dark Hard. Like
+ * accent and the same layout as Gruvbox Material Dark Hard. Like
  * that theme it runs the window in dark mode.
  */
 :root[data-theme='tokyo-night-moon'] {
@@ -170,8 +154,6 @@
   --code-bg: #1e2030;
   --inline-code-bg: #2f334d;
   --inline-code-fg: #c3e88d;
-  --font-ui: 'Inter Variable', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
   --editor-pad-y: 10px;
   --editor-pad-x: 14px;
 }
@@ -192,13 +174,23 @@ body,
 body {
   background: var(--bg);
   color: var(--fg);
-  font: 13px/1.4 var(--font-ui);
+  font-family: var(--font-app);
+  font-size: 13px;
+  line-height: 1.4;
   -webkit-font-smoothing: antialiased;
 }
 
 button {
   font: inherit;
   color: inherit;
+}
+
+/* The browser gives these its own monospace; mdpad uses the app font everywhere. */
+pre,
+code,
+kbd,
+samp {
+  font-family: var(--font-app);
 }
 
 [hidden] {
@@ -385,7 +377,6 @@ button {
 .markdown-body {
   max-width: 860px;
   margin: 0 auto;
-  font-family: var(--font-prose);
   /* 15px at the default size of 14px. */
   font-size: calc(var(--content-size) * 15 / 14);
   line-height: 1.6;
@@ -467,7 +458,6 @@ button {
 }
 
 .markdown-body :is(code, kbd) {
-  font-family: var(--font-mono);
   font-size: 85%;
 }
 

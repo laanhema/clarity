@@ -47,10 +47,8 @@ const THEME_ITEMS: { theme: ThemeSetting; label: string }[] = [
 ]
 
 const FONT_ITEMS: { font: FontSetting; label: string }[] = [
-  { font: 'theme', label: 'Theme Default' },
-  { font: 'sans', label: 'Sans Serif' },
-  { font: 'serif', label: 'Serif' },
-  { font: 'mono', label: 'Monospace' },
+  { font: 'jetbrains-mono-nl', label: 'JetBrains Mono NL' },
+  { font: 'commit-mono', label: 'Commit Mono' },
 ]
 
 /** Editor text sizes offered in the menu; the preview scales with them. 14 is the default. */
@@ -139,7 +137,7 @@ export function buildMenu(options: MenuOptions): Menu {
         label: 'Font',
         submenu: FONT_ITEMS.map(
           ({ font, label }): MenuItemConstructorOptions => ({
-            label,
+            label: font === DEFAULT_UI_SETTINGS.font ? `${label} (Default)` : label,
             type: 'radio',
             checked: ui.font === font,
             click: () => options.setFont(font),

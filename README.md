@@ -50,7 +50,7 @@ The bars between the panes can also be moved with the Left and Right arrow keys 
 
 mdpad stores its settings in `settings.json` in Electron's userData folder: `~/.config/mdpad` on Linux, `~/Library/Application Support/mdpad` on macOS and `%APPDATA%\mdpad` on Windows. The file holds the view mode, theme, font, font size, pane sizes, recent folders and window position. Deleting it resets everything.
 
-**View → Font** sets the typeface of the editor and preview text. Theme Default keeps each theme's own fonts. Sans Serif uses the bundled Inter, Serif uses the system's serif font, and Monospace uses the theme's monospace font. Code in the preview stays monospace. **View → Font Size** sets the editor text size from 10 to 28 px (14 px by default), and preview text and code scale with it. Both apply right away and are kept between runs.
+**View → Font** picks the one typeface mdpad uses everywhere it draws, in every theme: the sidebar, the editor, the preview and its code, and the status bar. It offers JetBrains Mono NL (JetBrains Mono without ligatures) and Commit Mono, the default. Both are bundled and have no ligatures. The menu bar, the title bar and the file dialogs are drawn by the system, so they keep the system font. **View → Font Size** sets the editor text size from 10 to 28 px (14 px by default), and preview text and code scale with it. Both apply right away and are kept between runs.
 
 ## Development
 

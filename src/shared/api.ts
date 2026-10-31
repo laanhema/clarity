@@ -51,12 +51,13 @@ export const THEME_SETTINGS = [
 ] as const satisfies readonly ThemeSetting[]
 
 /**
- * The typeface of the reading and writing text (editor and preview prose).
- * `theme` keeps each theme's own fonts; the others use one typeface for both panes.
- * Code in the preview always keeps the theme's monospace font.
+ * The one typeface of everything mdpad draws: the sidebar, the editor, the
+ * preview and its code, and the status bar, in every theme. Both fonts are
+ * bundled and have no ligatures. The native menu bar, title bar and dialogs
+ * keep the system font.
  */
-export type FontSetting = 'theme' | 'sans' | 'serif' | 'mono'
-export const FONT_SETTINGS = ['theme', 'sans', 'serif', 'mono'] as const satisfies readonly FontSetting[]
+export type FontSetting = 'jetbrains-mono-nl' | 'commit-mono'
+export const FONT_SETTINGS = ['jetbrains-mono-nl', 'commit-mono'] as const satisfies readonly FontSetting[]
 
 /** The command-line switch that hands a new window's theme to its preload script, so the first paint is right. */
 export const INITIAL_THEME_SWITCH = '--mdpad-theme='
@@ -82,7 +83,7 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   theme: 'system',
   sidebarWidth: 240,
   editorFraction: 0.5,
-  font: 'theme',
+  font: 'commit-mono',
   fontSize: 14,
 }
 

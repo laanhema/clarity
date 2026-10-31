@@ -539,29 +539,48 @@ describe('font and font size', () => {
     document.documentElement.style.removeProperty('--content-size')
   })
 
-  it("keeps the theme's fonts and today's sizes by default", () => {
-    expect(document.documentElement).toHaveAttribute('data-font', 'theme')
-    expect(fontOf(editorScroller())).toMatch(/^ui-monospace,/)
-    expect(fontOf(previewBody())).toMatch(/^system-ui,/)
+  // Everything mdpad draws: the sidebar, the editor, the preview and its code, and the status bar.
+  const appParts = () => [
+    document.querySelector('.sidebar-open'),
+    editorScroller(),
+    previewBody(),
+    previewCode(),
+    document.querySelector('.markdown-body h1'),
+    document.querySelector('.status-bar'),
+  ]
+
+  function expectWholeAppIn(family: string) {
+    for (const part of appParts()) {
+      if (!part) throw new Error('Missing part of the app')
+      expect(fontOf(part).split(',')[0]?.replaceAll('"', "'")).toBe(`'${family}'`)
+    }
+  }
+
+  it('uses Commit Mono for the whole app at 14px by default', () => {
+    expect(document.documentElement).toHaveAttribute('data-font', 'commit-mono')
+    expectWholeAppIn('Commit Mono')
     expect(sizeOf(editorScroller())).toBe('14px')
     expect(sizeOf(previewBody())).toBe('calc(14px * 15 / 14)')
     expect(sizeOf(previewCode())).toBe('calc(14px * 13 / 14)')
   })
 
-  it('applies a changed font and size to the editor and the preview at once', () => {
-    mock.changeSettings({ ...DEFAULT_UI_SETTINGS, font: 'serif', fontSize: 20 })
-    expect(fontOf(editorScroller())).toMatch(/Georgia.*serif$/)
-    expect(fontOf(previewBody())).toMatch(/Georgia.*serif$/)
+  it('applies a changed font and size to the whole app at once', () => {
+    mock.changeSettings({ ...DEFAULT_UI_SETTINGS, font: 'jetbrains-mono-nl', fontSize: 20 })
+    expect(document.documentElement).toHaveAttribute('data-font', 'jetbrains-mono-nl')
+    expectWholeAppIn('JetBrains Mono NL')
     expect(sizeOf(editorScroller())).toBe('20px')
     expect(sizeOf(previewBody())).toBe('calc(20px * 15 / 14)')
     expect(sizeOf(previewCode())).toBe('calc(20px * 13 / 14)')
 
-    mock.changeSettings({ ...DEFAULT_UI_SETTINGS, font: 'sans' })
-    expect(fontOf(editorScroller())).toMatch(/^"Inter Variable"/)
-    expect(fontOf(previewBody())).toMatch(/^"Inter Variable"/)
+    mock.changeSettings({ ...DEFAULT_UI_SETTINGS, font: 'commit-mono' })
+    expectWholeAppIn('Commit Mono')
     expect(sizeOf(editorScroller())).toBe('14px')
+  })
 
-    mock.changeSettings({ ...DEFAULT_UI_SETTINGS, font: 'mono' })
-    expect(fontOf(previewBody())).toMatch(/^ui-monospace,/)
+  it('keeps the same font in every theme', () => {
+    for (const theme of ['light', 'dark', 'gruvbox-material-dark-hard', 'tokyo-night-moon'] as const) {
+      mock.changeSettings({ ...DEFAULT_UI_SETTINGS, theme, font: 'jetbrains-mono-nl' })
+      expectWholeAppIn('JetBrains Mono NL')
+    }
   })
 })

@@ -1,0 +1,40 @@
+/* JetBrains Mono NL: the JetBrains Mono build without ligatures. See README.md in this folder. */
+@font-face {
+  font-family: 'JetBrains Mono NL';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./JetBrainsMonoNL-Regular.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono NL';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(./JetBrainsMonoNL-SemiBold.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono NL';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(./JetBrainsMonoNL-Bold.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono NL';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./JetBrainsMonoNL-Italic.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono NL';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url(./JetBrainsMonoNL-BoldItalic.woff2) format('woff2');
+}
