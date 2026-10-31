@@ -9,11 +9,12 @@ import {
   type UiSettings,
 } from '../../shared/api'
 import { Editor, type EditorHandle } from './components/Editor'
-import { Preview } from './components/Preview'
+import { Preview, type PreviewHandle } from './components/Preview'
 import { Sidebar } from './components/Sidebar'
 import { Splitter } from './components/Splitter'
 import { StatusBar } from './components/StatusBar'
 import { decideExternalChange } from './externalChange'
+import { useScrollSync } from './scrollSync/useScrollSync'
 import { countWords, errorMessage, fileName } from './text'
 
 interface DocumentState {
@@ -64,6 +65,7 @@ export function App() {
   const busy = useRef(false)
   const latestDoc = useRef(doc)
   const editor = useRef<EditorHandle>(null)
+  const preview = useRef<PreviewHandle>(null)
   const workspace = useRef<HTMLDivElement>(null)
   const externalCheck = useRef({ running: false, again: false })
 
@@ -302,6 +304,7 @@ export function App() {
   useEffect(() => api.onTreeChanged(() => onTreeChanged()), [api])
 
   const { viewMode, sidebarWidth, editorFraction } = settings
+  useScrollSync(editor, preview, viewMode, doc.key)
   const showEditor = viewMode !== 'preview'
   const showPreview = viewMode !== 'editor'
   const columns =
@@ -358,6 +361,7 @@ export function App() {
           />
         )}
         <Preview
+          ref={preview}
           markdown={doc.content}
           documentKey={doc.key}
           documentPath={doc.path}

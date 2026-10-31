@@ -1,10 +1,28 @@
 import { toJsxRuntime, type Components } from 'hast-util-to-jsx-runtime'
-import { createContext, use, useEffect, useMemo, useRef, useState, type ComponentProps, type MouseEvent } from 'react'
+import {
+  createContext,
+  use,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type MouseEvent,
+  type Ref,
+} from 'react'
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
 import { routeLink } from '../links'
 import { ID_PREFIX, MERMAID_CLASS } from '../markdown/pipeline'
 import { useRenderedMarkdown } from '../markdown/useRenderedMarkdown'
+import { lineToOffset, offsetToLine, type Anchor } from '../scrollSync/lineMap'
+import { lineCountOf, measurePreviewAnchors, type SyncPane } from '../scrollSync/panes'
 import { MermaidDiagram } from './MermaidDiagram'
+
+export interface PreviewHandle {
+  /** Keeps the preview scrolled in step with the editor. */
+  readonly scrollSync: SyncPane
+}
 
 export interface PreviewProps {
   markdown: string
@@ -13,6 +31,7 @@ export interface PreviewProps {
   folderPath: string | null
   hidden?: boolean
   onOpenDocument: (path: string) => void
+  ref?: Ref<PreviewHandle>
 }
 
 const REMOTE_IMAGE = /^(?:https?:)?\/\//i
@@ -68,17 +87,75 @@ function PreviewImage({ src, alt, ...rest }: ComponentProps<'img'>) {
 }
 
 /** The placeholders the pipeline makes for ```mermaid blocks become diagrams; other divs stay divs. */
-function PreviewDiv({ 'data-mermaid': mermaid, ...rest }: ComponentProps<'div'> & { 'data-mermaid'?: string }) {
-  if (rest.className === MERMAID_CLASS && typeof mermaid === 'string') return <MermaidDiagram source={mermaid} />
+function PreviewDiv({
+  'data-mermaid': mermaid,
+  ...rest
+}: ComponentProps<'div'> & { 'data-mermaid'?: string; 'data-source-line'?: number; 'data-source-line-end'?: number }) {
+  if (rest.className === MERMAID_CLASS && typeof mermaid === 'string') {
+    // The diagram's source lines stay on the page for scroll syncing.
+    return (
+      <div data-source-line={rest['data-source-line']} data-source-line-end={rest['data-source-line-end']}>
+        <MermaidDiagram source={mermaid} />
+      </div>
+    )
+  }
   return <div {...rest} />
 }
 
 const components: Partial<Components> = { img: PreviewImage, div: PreviewDiv }
 
 /** The rendered, sanitized Markdown preview. */
-export function Preview({ markdown, documentKey, documentPath, folderPath, hidden = false, onOpenDocument }: PreviewProps) {
+export function Preview({
+  markdown,
+  documentKey,
+  documentPath,
+  folderPath,
+  hidden = false,
+  onOpenDocument,
+  ref,
+}: PreviewProps) {
   const tree = useRenderedMarkdown(markdown, documentKey, !hidden)
   const rootRef = useRef<HTMLElement>(null)
+  const articleRef = useRef<HTMLElement>(null)
+  const lineCountRef = useRef(1)
+  // Measured on demand and dropped whenever the layout or the document changes.
+  const anchorsRef = useRef<Anchor[] | null>(null)
+
+  useEffect(() => {
+    lineCountRef.current = lineCountOf(markdown)
+    anchorsRef.current = null
+  }, [markdown])
+
+  useImperativeHandle(ref, () => {
+    const anchors = (scroller: HTMLElement) =>
+      (anchorsRef.current ??= measurePreviewAnchors(scroller, lineCountRef.current))
+    return {
+      scrollSync: {
+        scroller: () => rootRef.current,
+        lineAt: (offset) => (rootRef.current ? offsetToLine(anchors(rootRef.current), offset) : 0),
+        offsetOf: (line) => (rootRef.current ? lineToOffset(anchors(rootRef.current), line) : 0),
+        subscribe: (listener) => {
+          const root = rootRef.current
+          const article = articleRef.current
+          if (!root || !article) return () => undefined
+          const changed = () => {
+            anchorsRef.current = null
+            listener('layout')
+          }
+          // Re-renders, images and diagrams that load late, pane and window resizes.
+          const resizes = new ResizeObserver(changed)
+          resizes.observe(root)
+          resizes.observe(article)
+          const mutations = new MutationObserver(changed)
+          mutations.observe(article, { childList: true, subtree: true, characterData: true, attributes: true })
+          return () => {
+            resizes.disconnect()
+            mutations.disconnect()
+          }
+        },
+      },
+    }
+  }, [])
 
   const content = useMemo(() => (tree ? toJsxRuntime(tree, { Fragment, jsx, jsxs, components }) : null), [tree])
 
@@ -116,7 +193,9 @@ export function Preview({ markdown, documentKey, documentPath, folderPath, hidde
       }}
     >
       <DocumentPathContext value={documentPath}>
-        <article className="markdown-body">{content}</article>
+        <article className="markdown-body" ref={articleRef}>
+          {content}
+        </article>
       </DocumentPathContext>
     </section>
   )

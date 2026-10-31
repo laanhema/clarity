@@ -3,6 +3,7 @@ import { toHtml } from 'hast-util-to-html'
 import { describe, expect, it } from 'vitest'
 import { grammarFor } from './highlighter'
 import {
+  annotateSourceLines,
   codeLanguages,
   hasMath,
   highlightCodeBlocks,
@@ -173,7 +174,9 @@ describe('code highlighting', () => {
 
   it('leaves blocks without a known language alone', async () => {
     const out = toHtml(await renderMarkdown('```\nplain <b>text</b>\n```'))
-    expect(out).toBe('<pre><code>plain &#x3C;b>text&#x3C;/b>\n</code></pre>')
+    expect(out).toBe(
+      '<pre data-source-line="1" data-source-line-end="3"><code>plain &#x3C;b>text&#x3C;/b>\n</code></pre>',
+    )
   })
 
   it('highlights from text only, so markup in code stays text', async () => {
@@ -270,7 +273,7 @@ describe('YAML frontmatter', () => {
 describe('math', () => {
   it('typesets inline math with KaTeX', async () => {
     const out = toHtml(await renderMarkdown('Euler: $e^{i\\pi} + 1 = 0$ done'))
-    expect(out).toMatch(/<p>Euler: <span class="katex">/)
+    expect(out).toMatch(/<p data-source-line="1" data-source-line-end="1">Euler: <span class="katex">/)
     expect(out).toContain('<annotation encoding="application/x-tex">e^{i\\pi} + 1 = 0</annotation>')
     expect(out).not.toContain('katex-display')
     expect(out).toContain('done</p>')
@@ -292,7 +295,9 @@ describe('math', () => {
   it('keeps text without math as it was', async () => {
     const tree = markdownToSafeTree('Just text and `code`.')
     expect(hasMath(tree)).toBe(false)
-    expect(toHtml(await renderMarkdown('Just text and `code`.'))).toBe('<p>Just text and <code>code</code>.</p>')
+    expect(toHtml(await renderMarkdown('Just text and `code`.'))).toBe(
+      '<p data-source-line="1" data-source-line-end="1">Just text and <code>code</code>.</p>',
+    )
   })
 
   it('neutralizes scripts, handlers and links inside math', async () => {
@@ -317,7 +322,9 @@ describe('Mermaid', () => {
 
   it('turns a mermaid fence into a diagram placeholder, not a code block', async () => {
     const out = toHtml(await renderMarkdown(`\`\`\`mermaid\n${diagram}\n\`\`\``))
-    expect(out).toBe(`<div class="${MERMAID_CLASS}" data-mermaid="graph TD\n  A[Start] --> B{Ok?}"></div>`)
+    expect(out).toBe(
+      `<div class="${MERMAID_CLASS}" data-mermaid="graph TD\n  A[Start] --> B{Ok?}" data-source-line="1" data-source-line-end="4"></div>`,
+    )
     expect(out).not.toMatch(/<pre|shiki/)
   })
 
@@ -330,7 +337,13 @@ describe('Mermaid', () => {
     const source = 'graph TD\n  A["<img src=x onerror=alert(1)>"] --> B["<script>alert(2)</script>"]'
     const tree = await renderMarkdown(`\`\`\`mermaid\n${source}\n\`\`\``)
     // One empty element; the source is only an attribute's text, which React escapes.
-    expect(elementsOf(tree)).toEqual(['div', `div className=${MERMAID_CLASS}`, `div dataMermaid=${source}`])
+    expect(elementsOf(tree)).toEqual([
+      'div',
+      `div className=${MERMAID_CLASS}`,
+      `div dataMermaid=${source}`,
+      'div dataSourceLine=1',
+      'div dataSourceLineEnd=4',
+    ])
   })
 
   it('cannot be faked with raw HTML', async () => {
@@ -347,6 +360,53 @@ describe('frontmatter, math and Mermaid together', () => {
     expect(out).toMatch(/^<div class="frontmatter">/)
     expect(out).toContain('$5 and $10')
     expect(out.match(/class="katex"/g)).toHaveLength(1)
-    expect(out).toContain(`<div class="${MERMAID_CLASS}" data-mermaid="graph TD\n  A --> B"></div>`)
+    expect(out).toContain(
+      `<div class="${MERMAID_CLASS}" data-mermaid="graph TD\n  A --> B" data-source-line="7" data-source-line-end="10"></div>`,
+    )
+  })
+})
+
+describe('source lines', () => {
+  const annotated = (markdown: string) => toHtml(annotateSourceLines(markdownToSafeTree(markdown)))
+
+  it('marks blocks with the lines they came from', () => {
+    const out = annotated('# Title\n\nfirst\nsecond\n\n- a\n- b\n')
+    expect(out).toContain('<h1 data-source-line="1" data-source-line-end="1">')
+    expect(out).toContain('<p data-source-line="3" data-source-line-end="4">')
+    expect(out).toContain('<ul data-source-line="6" data-source-line-end="7">')
+    expect(out).toContain('<li data-source-line="7" data-source-line-end="7">')
+  })
+
+  it('marks table rows, so a long table stays lined up', () => {
+    const out = annotated('| a |\n|---|\n| 1 |\n| 2 |\n')
+    expect(out).toContain('<table data-source-line="1" data-source-line-end="4">')
+    expect(out).toContain('<tr data-source-line="4" data-source-line-end="4">')
+  })
+
+  it('leaves inline elements alone', () => {
+    expect(annotated('some **bold** text')).toContain('<strong>bold</strong>')
+  })
+
+  it('does not trust line attributes written in the document', () => {
+    const out = annotated('\n\n<span data-source-line="99">x</span>')
+    expect(out).not.toContain('99')
+  })
+
+  it('marks Mermaid diagrams, and skips KaTeX markup, whose positions are not in the document', async () => {
+    const out = toHtml(await renderMarkdown('text\n\n$$\nx^2\n$$\n\n```mermaid\ngraph TD\n```\n'))
+    expect(out).toContain(`<div class="${MERMAID_CLASS}" data-mermaid="graph TD" data-source-line="7" data-source-line-end="9">`)
+    expect(out).toMatch(/<span class="katex-display"><span class="katex">/)
+    expect(out.match(/data-source-line=/g)).toHaveLength(2)
+  })
+
+  it('leaves the frontmatter block to interpolation, as it has no position', async () => {
+    const out = toHtml(await renderMarkdown('---\ntitle: x\n---\n\nBody\n'))
+    expect(out).toMatch(/^<div class="frontmatter"><table><tbody><tr>/)
+    expect(out).toContain('<p data-source-line="5" data-source-line-end="5">Body</p>')
+  })
+
+  it('keeps the lines of highlighted code blocks', async () => {
+    const out = toHtml(await renderMarkdown('text\n\n```ts\nconst a = 1\nconst b = 2\n```\n'))
+    expect(out).toMatch(/<pre class="shiki[^>]*data-source-line="3" data-source-line-end="6"/)
   })
 })

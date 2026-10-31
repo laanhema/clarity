@@ -1,9 +1,10 @@
 import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'
 import { indentOnInput } from '@codemirror/language'
 import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from '@codemirror/search'
-import { EditorState, type Extension } from '@codemirror/state'
+import { EditorState, Transaction, type Extension } from '@codemirror/state'
 import { drawSelection, dropCursor, EditorView, highlightActiveLine, keymap, placeholder } from '@codemirror/view'
 import { useEffect, useEffectEvent, useImperativeHandle, useRef, type Ref } from 'react'
+import { editorLineAt, editorOffsetOf, type PaneChange, type SyncPane } from '../scrollSync/panes'
 import { markdownExtensions } from './editorMarkdown'
 
 export interface EditorHandle {
@@ -15,6 +16,8 @@ export interface EditorHandle {
    * handle the command instead.
    */
   runHistory(command: 'undo' | 'redo'): boolean
+  /** Keeps the preview scrolled in step with the editor. */
+  readonly scrollSync: SyncPane
 }
 
 export interface EditorProps {
@@ -59,7 +62,12 @@ const editorTheme = EditorView.theme({
   },
 })
 
-function createState(doc: string, onDocChanged: (value: string) => void): EditorState {
+interface StateCallbacks {
+  onDocChanged: (value: string) => void
+  onPaneChange: (change: PaneChange) => void
+}
+
+function createState(doc: string, { onDocChanged, onPaneChange }: StateCallbacks): EditorState {
   const extensions: Extension[] = [
     history(),
     drawSelection(),
@@ -77,6 +85,12 @@ function createState(doc: string, onDocChanged: (value: string) => void): Editor
     editorTheme,
     EditorView.updateListener.of((update) => {
       if (update.docChanged) onDocChanged(update.state.doc.toString())
+      // Typing, searching, undo: the user moved the editor, even without scrolling it.
+      if (update.transactions.some((transaction) => transaction.annotation(Transaction.userEvent) !== undefined)) {
+        onPaneChange('input')
+      } else if (update.geometryChanged || update.heightChanged) {
+        onPaneChange('layout')
+      }
     }),
   ]
   return EditorState.create({ doc, extensions })
@@ -90,10 +104,15 @@ export function Editor({ value, documentKey, onChange, hidden = false, ref }: Ed
   const reportedRef = useRef(value)
   const keyRef = useRef(documentKey)
   const initialValueRef = useRef(value)
+  const paneListenersRef = useRef(new Set<(change: PaneChange) => void>())
 
   const reportChange = useEffectEvent((text: string) => {
     reportedRef.current = text
     onChange(text)
+  })
+
+  const notifyPane = useEffectEvent((change: PaneChange) => {
+    for (const listener of paneListenersRef.current) listener(change)
   })
 
   useEffect(() => {
@@ -107,7 +126,10 @@ export function Editor({ value, documentKey, onChange, hidden = false, ref }: Ed
     const view = new EditorView({
       root,
       parent: root,
-      state: createState(initialValueRef.current, (text) => reportChange(text)),
+      state: createState(initialValueRef.current, {
+        onDocChanged: (text) => reportChange(text),
+        onPaneChange: (change) => notifyPane(change),
+      }),
     })
     viewRef.current = view
     return () => {
@@ -124,7 +146,11 @@ export function Editor({ value, documentKey, onChange, hidden = false, ref }: Ed
     if (keyRef.current !== documentKey) {
       keyRef.current = documentKey
       reportedRef.current = value
-      view.setState(createState(value, (text) => reportChange(text)))
+      view.setState(
+        createState(value, { onDocChanged: (text) => reportChange(text), onPaneChange: (change) => notifyPane(change) }),
+      )
+      // A new document opens at its top; the preview follows the editor there.
+      view.scrollDOM.scrollTop = 0
       return
     }
     if (value === reportedRef.current) return
@@ -151,6 +177,16 @@ export function Editor({ value, documentKey, onChange, hidden = false, ref }: Ed
         if (command === 'undo') undo(view)
         else redo(view)
         return true
+      },
+      scrollSync: {
+        scroller: () => viewRef.current?.scrollDOM ?? null,
+        lineAt: (offset) => (viewRef.current ? editorLineAt(viewRef.current, offset) : 0),
+        offsetOf: (line) => (viewRef.current ? editorOffsetOf(viewRef.current, line) : 0),
+        subscribe: (listener) => {
+          const listeners = paneListenersRef.current
+          listeners.add(listener)
+          return () => listeners.delete(listener)
+        },
       },
     }),
     [],

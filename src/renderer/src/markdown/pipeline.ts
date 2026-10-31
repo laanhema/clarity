@@ -158,15 +158,47 @@ export function hasMath(tree: Root): boolean {
   return visit(tree.children)
 }
 
+/** Block elements that carry the source lines they came from. */
+const SOURCE_LINE_TAGS = new Set([
+  'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'blockquote', 'ul', 'ol', 'li', 'table', 'tr', 'hr',
+  'div', 'details', 'summary', 'dl', 'dt', 'dd', 'figure', 'img',
+])
+
 /**
- * The full preview pipeline: sanitize, mark Mermaid diagrams, typeset math
- * and colour code blocks. KaTeX and the grammars load the first time a
- * document needs them.
+ * Marks block elements with the source lines they were rendered from
+ * (`data-source-line` and `data-source-line-end`, 1-based and inclusive), so
+ * the preview can scroll in step with the editor. Runs on an already
+ * sanitized tree, from the parser's own positions: the sanitizer drops any
+ * `data-` attributes the document itself wrote. KaTeX's markup is skipped:
+ * its positions are in KaTeX's own HTML, not in the document.
+ */
+export function annotateSourceLines(tree: Root): Root {
+  const visit = (nodes: (RootContent | ElementContent)[]) => {
+    for (const node of nodes) {
+      if (node.type !== 'element') continue
+      const classes = node.properties['className']
+      if (Array.isArray(classes) && classes.some((name) => name === 'katex' || name === 'katex-display')) continue
+      const position = node.position
+      if (position && SOURCE_LINE_TAGS.has(node.tagName)) {
+        node.properties['dataSourceLine'] = position.start.line
+        node.properties['dataSourceLineEnd'] = position.end.line
+      }
+      visit(node.children)
+    }
+  }
+  visit(tree.children)
+  return tree
+}
+
+/**
+ * The full preview pipeline: sanitize, mark Mermaid diagrams, typeset math,
+ * colour code blocks and mark source lines. KaTeX and the grammars load the
+ * first time a document needs them.
  */
 export async function renderMarkdown(markdown: string): Promise<Root> {
   const tree = prepareMermaidBlocks(markdownToSafeTree(markdown))
   if (hasMath(tree)) (await import('./math')).typesetMath(tree)
   const languages = codeLanguages(tree)
-  if (languages.size === 0) return tree
-  return highlightCodeBlocks(tree, await loadHighlighter(languages))
+  if (languages.size > 0) highlightCodeBlocks(tree, await loadHighlighter(languages))
+  return annotateSourceLines(tree)
 }

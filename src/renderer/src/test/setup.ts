@@ -16,6 +16,14 @@ if (!('execCommand' in Document.prototype)) {
 if (!('scrollIntoView' in Element.prototype)) {
   Object.defineProperty(Element.prototype, 'scrollIntoView', { value: () => undefined })
 }
+// Nor does it have ResizeObserver; without layout nothing would ever be resized.
+if (!('ResizeObserver' in globalThis)) {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+}
 
 afterEach(() => {
   cleanup()
