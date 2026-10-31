@@ -399,6 +399,39 @@ describe('undo and redo from the Edit menu', () => {
   })
 })
 
+describe('selecting text in the editor', () => {
+  it('extends the selection with Shift+arrows and Ctrl+Shift+arrows', async () => {
+    const user = await openFirstFileAndEdit()
+    act(() => editorView().dispatch({ selection: { anchor: 0 } }))
+    editor().focus()
+    const selected = () => {
+      const { from, to } = editorView().state.selection.main
+      return editorText().slice(from, to)
+    }
+    await user.keyboard('{Shift>}{ArrowRight}{ArrowRight}{/Shift}')
+    expect(selected()).toBe('# ')
+    await user.keyboard('{Shift>}{ArrowLeft}{/Shift}')
+    expect(selected()).toBe('#')
+    await user.keyboard('{Control>}{Shift>}{ArrowRight}{/Shift}{/Control}')
+    expect(selected()).toBe('# First')
+    await user.keyboard('{Control>}{Shift>}{ArrowLeft}{/Shift}{/Control}')
+    expect(selected()).toBe('# ')
+  })
+
+  // CodeMirror draws the selection behind the text, so an opaque active line
+  // would hide a selection made within the line the cursor is on.
+  it('keeps the active line translucent in every theme', () => {
+    const activeLineColours = [...styles.matchAll(/--editor-active-line:\s*([^;]+);/g)].map((match) => match[1] ?? '')
+    expect(activeLineColours).toHaveLength(4)
+    for (const colour of activeLineColours) {
+      const alpha = /^rgba\([^)]*,\s*([\d.]+)\)$/.exec(colour)?.[1]
+      const mixed = /^color-mix\(in srgb, #[\da-f]{6} (\d+)%, transparent\)$/.exec(colour)?.[1]
+      const opacity = alpha !== undefined ? Number(alpha) : mixed !== undefined ? Number(mixed) / 100 : 1
+      expect(opacity, colour).toBeLessThan(0.6)
+    }
+  })
+})
+
 describe('new documents', () => {
   it('starts an empty document after settling unsaved changes', async () => {
     await openFirstFileAndEdit()

@@ -99,8 +99,9 @@
   --md-list: #ea6962;
   --md-list-weight: 700;
   --md-quote: #928374;
-  --editor-selection: #3c3836;
-  --editor-active-line: #282828;
+  --editor-selection: #504945;
+  /* Translucent so the selection drawn behind the text shows through; #282828 on --bg. */
+  --editor-active-line: color-mix(in srgb, #3c3836 35%, transparent);
   --editor-match: #473c29;
   --editor-match-selected: color-mix(in srgb, #d8a657 40%, transparent);
   --code-bg: #282828;
@@ -144,7 +145,8 @@
   --md-list-weight: 700;
   --md-quote: #828bb8;
   --editor-selection: #2d3f76;
-  --editor-active-line: #2f334d;
+  /* Translucent so the selection drawn behind the text shows through; #2f334d on --bg. */
+  --editor-active-line: color-mix(in srgb, #3b4261 50%, transparent);
   --editor-match: color-mix(in srgb, #3e68d7 45%, transparent);
   --editor-match-selected: color-mix(in srgb, #ff966c 40%, transparent);
   --code-bg: #1e2030;
