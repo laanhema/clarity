@@ -16,6 +16,7 @@ import { StatusBar } from './components/StatusBar'
 import { decideExternalChange } from './externalChange'
 import { useScrollSync } from './scrollSync/useScrollSync'
 import { countWords, errorMessage, fileName } from './text'
+import { useTokenEstimate } from './useTokenEstimate'
 
 interface DocumentState {
   /** Null for a new document that has never been saved. */
@@ -71,6 +72,7 @@ export function App() {
 
   const dirty = isDirty(doc)
   const name = documentName(doc)
+  const tokenCount = useTokenEstimate(doc.content)
 
   useEffect(() => {
     latestDoc.current = doc
@@ -374,6 +376,7 @@ export function App() {
         path={doc.path}
         dirty={dirty}
         wordCount={countWords(doc.content)}
+        tokenCount={tokenCount}
         message={message}
         theme={settings.theme}
         onCycleTheme={() => updateSettings({ theme: NEXT_THEME[settings.theme] })}

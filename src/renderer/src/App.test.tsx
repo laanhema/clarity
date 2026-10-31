@@ -73,6 +73,7 @@ describe('App layout', () => {
     expect(screen.getByRole('region', { name: 'Preview' })).toBeInTheDocument()
     expect(screen.getByText('Untitled')).toBeInTheDocument()
     expect(screen.getByText('0 words')).toBeInTheDocument()
+    expect(screen.getByText('0 tokens')).toBeInTheDocument()
   })
 })
 
@@ -83,6 +84,11 @@ describe('unsaved changes', () => {
     expect(screen.getByRole('img', { name: 'Unsaved changes' })).toBeInTheDocument()
     expect(mock.api.setDocumentDirty).toHaveBeenLastCalledWith(true)
     expect(screen.getByText('2 words')).toBeInTheDocument()
+  })
+
+  it('estimates the tokens of the unsaved text once typing pauses', async () => {
+    await openFirstFileAndEdit()
+    await waitFor(() => expect(screen.getByText(/^≈\d+ tokens$/)).toBeInTheDocument())
   })
 
   it('switches files without asking when there are no changes', async () => {
