@@ -26,7 +26,7 @@ const percent = (fraction: number): string => `±${Math.round(fraction * 100)}%`
 export function StatusBar({ path, dirty, wordCount, tokenCount, message, theme, onCycleTheme }: StatusBarProps) {
   const tooltipId = useId()
   // An empty text has no tokens for sure; anything else is an estimate.
-  const approx = tokenCount === 0 ? '' : '≈'
+  const approx = tokenCount === 0 ? '' : '≈ '
   return (
     <footer className="status-bar">
       <span className="status-path" title={path ?? undefined}>
@@ -52,7 +52,7 @@ export function StatusBar({ path, dirty, wordCount, tokenCount, message, theme, 
         {wordCount} {wordCount === 1 ? 'word' : 'words'}
       </span>
       <span className="status-tokens" tabIndex={0} aria-describedby={tooltipId}>
-        <span>{(approx && approx + ' ') + formatTokenCount(tokenCount)} tokens</span>
+        <span>{approx + formatTokenCount(tokenCount)} tokens</span>
         <span className="status-tooltip" role="tooltip" id={tooltipId}>
           <strong>{approx + tokenCount.toLocaleString('en-US')} tokens for Claude Opus 5.5</strong>
           <span>
