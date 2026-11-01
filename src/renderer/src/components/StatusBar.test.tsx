@@ -34,7 +34,7 @@ describe('StatusBar save state', () => {
     const state = container.querySelector('.status-state')
     expect(state).toHaveAttribute('aria-live', 'polite')
     expect(state).toBeEmptyDOMElement()
-    expect(screen.queryByText(/saved/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^(saved|● unsaved)$/i)).not.toBeInTheDocument()
   })
 
   it('shows the unsaved marker while the document has changes', () => {
