@@ -350,8 +350,16 @@ samp {
 }
 
 .tree-chevron {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
   width: 12px;
   color: var(--fg-muted);
+}
+
+.tree-directory[aria-expanded='true'] .tree-chevron svg {
+  transform: rotate(90deg);
 }
 
 /* Folder and file icons, the same in every theme. */
@@ -367,7 +375,7 @@ samp {
 }
 
 .tree-file {
-  padding-left: 12px;
+  padding-left: 8px;
 }
 
 .tree-file .tree-icon {
@@ -378,7 +386,8 @@ samp {
   background: var(--bg-active);
 }
 
-.tree-file-name {
+.tree-file-name,
+.tree-directory-name {
   flex: 1;
   min-width: 0;
   overflow: hidden;

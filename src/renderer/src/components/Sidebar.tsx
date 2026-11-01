@@ -77,10 +77,22 @@ function DirectoryItem({ node, ...context }: TreeContext & { node: DirectoryNode
         onClick={() => setExpanded((value) => !value)}
       >
         <span className="tree-chevron" aria-hidden="true">
-          {expanded ? '▾' : '▸'}
+          <svg
+            viewBox="0 0 16 16"
+            width="12"
+            height="12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 3.5 10.5 8 6 12.5" />
+          </svg>
         </span>
         <FolderIcon open={expanded} />
-        {node.name}
+        <span className="tree-directory-name">{node.name}</span>
       </button>
       {expanded && <Tree {...context} nodes={node.children} />}
     </li>

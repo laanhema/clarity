@@ -57,6 +57,25 @@ describe('Sidebar', () => {
     expect(screen.getByRole('button', { name: 'setup.md' })).toBeInTheDocument()
   })
 
+  it('draws the folder chevron as an SVG, not a text glyph', async () => {
+    renderSidebar()
+    const guides = screen.getByRole('button', { name: 'guides' })
+    const chevron = guides.querySelector('.tree-chevron')
+    expect(chevron?.querySelector('svg')).toBeInTheDocument()
+    expect(chevron).toHaveTextContent(/^$/)
+
+    await userEvent.click(guides)
+    expect(guides.querySelector('.tree-chevron svg')).toBeInTheDocument()
+    expect(guides).not.toHaveTextContent(/[▾▸]/)
+  })
+
+  it('puts the folder name in its own span so long names truncate', () => {
+    renderSidebar()
+    const name = within(screen.getByRole('button', { name: 'guides' })).getByText('guides')
+    expect(name.tagName).toBe('SPAN')
+    expect(name).toHaveClass('tree-directory-name')
+  })
+
   it('reports the clicked file', async () => {
     const { onSelectFile } = renderSidebar()
     await userEvent.click(screen.getByRole('button', { name: 'setup.md' }))
