@@ -6,6 +6,7 @@ import {
   MAX_RECENT_FOLDERS,
   SettingsStore,
   addRecentFolder,
+  LEGACY_USER_DATA_FOLDERS,
   migrateLegacySettings,
   parseSettings,
   pruneRecentFolders,
@@ -167,45 +168,82 @@ describe('SettingsStore', () => {
 
 describe('migrateLegacySettings', () => {
   let root: string
-  let legacy: string
+  let lantern: string
+  let mdpad: string
   let current: string
-  const legacyContent = `${JSON.stringify({ ui: { theme: 'light', fontSize: 18 }, recentFolders: ['/notes'] })}\n`
+  const lanternContent = `${JSON.stringify({ ui: { theme: 'gruvbox-material-dark-hard', fontSize: 16 }, recentFolders: ['/docs'] })}\n`
+  const mdpadContent = `${JSON.stringify({ ui: { theme: 'light', fontSize: 18 }, recentFolders: ['/notes'] })}\n`
+  const legacy = (): string[] => [lantern, mdpad]
+
+  async function writeLegacy(file: string, content: string): Promise<void> {
+    await mkdir(path.dirname(file), { recursive: true })
+    await writeFile(file, content)
+  }
 
   beforeEach(async () => {
     root = await makeTempDir()
-    legacy = path.join(root, 'mdpad', 'settings.json')
-    current = path.join(root, 'lantern', 'settings.json')
-    await mkdir(path.dirname(legacy), { recursive: true })
-    await writeFile(legacy, legacyContent)
+    lantern = path.join(root, 'lantern', 'settings.json')
+    mdpad = path.join(root, 'mdpad', 'settings.json')
+    current = path.join(root, 'clarity', 'settings.json')
   })
 
   afterEach(() => removeDir(root))
 
-  it('copies the old settings once when the new folder has none', async () => {
-    expect(await migrateLegacySettings(current, legacy)).toBe(true)
-    expect(await readFile(current, 'utf8')).toBe(legacyContent)
+  it('copies the mdpad settings once when they are the only old ones', async () => {
+    await writeLegacy(mdpad, mdpadContent)
+    expect(await migrateLegacySettings(current, legacy())).toBe(true)
+    expect(await readFile(current, 'utf8')).toBe(mdpadContent)
     const store = await SettingsStore.load(current)
     expect(store.current.ui.theme).toBe('light')
     expect(store.current.ui.fontSize).toBe(18)
     expect(store.current.recentFolders).toEqual(['/notes'])
 
     await writeFile(current, '{}\n')
-    expect(await migrateLegacySettings(current, legacy)).toBe(false)
+    expect(await migrateLegacySettings(current, legacy())).toBe(false)
     expect(await readFile(current, 'utf8')).toBe('{}\n')
-    expect(await readFile(legacy, 'utf8')).toBe(legacyContent)
+    expect(await readFile(mdpad, 'utf8')).toBe(mdpadContent)
+  })
+
+  it('copies the lantern settings when they are the only old ones', async () => {
+    await writeLegacy(lantern, lanternContent)
+    expect(await migrateLegacySettings(current, legacy())).toBe(true)
+    expect(await readFile(current, 'utf8')).toBe(lanternContent)
+    expect((await SettingsStore.load(current)).current.recentFolders).toEqual(['/docs'])
+    expect(await readFile(lantern, 'utf8')).toBe(lanternContent)
+  })
+
+  it('prefers the lantern settings over the older mdpad ones', async () => {
+    await writeLegacy(lantern, lanternContent)
+    await writeLegacy(mdpad, mdpadContent)
+    expect(await migrateLegacySettings(current, legacy())).toBe(true)
+    expect(await readFile(current, 'utf8')).toBe(lanternContent)
+    expect(await readFile(lantern, 'utf8')).toBe(lanternContent)
+    expect(await readFile(mdpad, 'utf8')).toBe(mdpadContent)
+  })
+
+  it('falls back to mdpad when the lantern folder has no settings file', async () => {
+    await mkdir(path.dirname(lantern), { recursive: true })
+    await writeLegacy(mdpad, mdpadContent)
+    expect(await migrateLegacySettings(current, legacy())).toBe(true)
+    expect(await readFile(current, 'utf8')).toBe(mdpadContent)
   })
 
   it('leaves existing new settings alone', async () => {
-    await mkdir(path.dirname(current), { recursive: true })
-    await writeFile(current, '{"ui":{"theme":"dark"}}\n')
-    expect(await migrateLegacySettings(current, legacy)).toBe(false)
+    await writeLegacy(lantern, lanternContent)
+    await writeLegacy(mdpad, mdpadContent)
+    await writeLegacy(current, '{"ui":{"theme":"dark"}}\n')
+    expect(await migrateLegacySettings(current, legacy())).toBe(false)
     expect(await readFile(current, 'utf8')).toBe('{"ui":{"theme":"dark"}}\n')
-    expect(await readFile(legacy, 'utf8')).toBe(legacyContent)
+    expect(await readFile(lantern, 'utf8')).toBe(lanternContent)
+    expect(await readFile(mdpad, 'utf8')).toBe(mdpadContent)
   })
 
   it('does nothing when there are no old settings', async () => {
-    const missing = path.join(root, 'none', 'settings.json')
-    expect(await migrateLegacySettings(current, missing)).toBe(false)
+    expect(await migrateLegacySettings(current, legacy())).toBe(false)
     await expect(readFile(current, 'utf8')).rejects.toThrow()
+  })
+
+  it('looks for the old folders by their earlier names, most recent first', () => {
+    expect(LEGACY_USER_DATA_FOLDERS).toEqual(['lantern', 'mdpad'])
   })
 })

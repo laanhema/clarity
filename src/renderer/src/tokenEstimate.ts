@@ -2,7 +2,7 @@
  * Estimates how many tokens Claude Opus 5.5 would count for a text.
  *
  * Anthropic has not published the tokenizer that Claude Opus 4.7 and later
- * use, so Lantern cannot count exactly offline. Instead it counts a few text
+ * use, so Clarity cannot count exactly offline. Instead it counts a few text
  * features in one pass and weighs them with coefficients fitted against real
  * Opus 5.5 counts (see TOKEN_WEIGHTS for how and how well).
  */

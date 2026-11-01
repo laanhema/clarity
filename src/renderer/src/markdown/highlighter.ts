@@ -8,7 +8,7 @@ import { tokyoNightMoon } from './tokyoNightMoonTheme'
 type LanguageModule = Promise<{ default: LanguageRegistration[] }>
 
 /**
- * The languages Lantern colours. Each one is a separate chunk that loads the
+ * The languages Clarity colours. Each one is a separate chunk that loads the
  * first time a document uses it, so the app ships no grammar it never shows.
  */
 const LANGUAGES: Record<string, () => LanguageModule> = {
@@ -74,7 +74,7 @@ const ALIASES: Record<string, string> = {
   zsh: 'bash',
 }
 
-/** The grammar name for a fenced code block's info string, or null when Lantern has no grammar for it. */
+/** The grammar name for a fenced code block's info string, or null when Clarity has no grammar for it. */
 export function grammarFor(language: string): string | null {
   const name = language.toLowerCase()
   const resolved = ALIASES[name] ?? name

@@ -1,9 +1,9 @@
 import type { JSX as ReactJSX } from 'react'
-import type { LanternApi } from '../../shared/api'
+import type { ClarityApi } from '../../shared/api'
 
 declare global {
   interface Window {
-    lantern: LanternApi
+    clarity: ClarityApi
   }
 
   // hast-util-to-jsx-runtime types its output with the global JSX namespace,

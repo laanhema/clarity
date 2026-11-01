@@ -5,7 +5,7 @@ import { openRecentFolder, registerIpcHandlers } from './ipc'
 import { buildMenu } from './menu'
 import { denyAllPermissions, hardenWebContents } from './security'
 import {
-  LEGACY_USER_DATA_FOLDER,
+  LEGACY_USER_DATA_FOLDERS,
   migrateLegacySettings,
   pruneRecentFolders,
   SettingsStore,
@@ -32,7 +32,7 @@ function createWindow(settings: SettingsStore): BrowserWindow {
     minWidth: 720,
     minHeight: 400,
     show: false,
-    title: 'Lantern',
+    title: 'Clarity',
     backgroundColor: backgroundColor(settings.current.ui),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -120,7 +120,10 @@ app.on('before-quit', () => {
 
 void app.whenReady().then(async () => {
   const settingsFile = join(app.getPath('userData'), 'settings.json')
-  await migrateLegacySettings(settingsFile, join(app.getPath('appData'), LEGACY_USER_DATA_FOLDER, 'settings.json'))
+  await migrateLegacySettings(
+    settingsFile,
+    LEGACY_USER_DATA_FOLDERS.map((folder) => join(app.getPath('appData'), folder, 'settings.json')),
+  )
   const settings = await SettingsStore.load(settingsFile)
   denyAllPermissions()
   registerIpcHandlers(settings)

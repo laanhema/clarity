@@ -4,13 +4,13 @@ import react from '@vitejs/plugin-react'
 import type { Plugin } from 'vite'
 import { contentSecurityPolicy } from './config/csp'
 
-const CSP_PLACEHOLDER = '%LANTERN_CSP%'
+const CSP_PLACEHOLDER = '%CLARITY_CSP%'
 
 /** Fills the CSP meta tag in index.html with the policy for the current command. */
 function cspPlugin(): Plugin {
   let mode: 'production' | 'development' = 'production'
   return {
-    name: 'lantern-csp',
+    name: 'clarity-csp',
     configResolved(config) {
       mode = config.command === 'serve' ? 'development' : 'production'
     },

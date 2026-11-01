@@ -49,7 +49,7 @@ Collect what changed since the last tag, group it for readers, and write it in p
 ## Project layout
 
 - \`src/main/\` — the Electron main process: windows, menus, file access over IPC (\`ipc.ts\`), settings (\`settings.ts\`).
-- \`src/preload/index.ts\` — the bridge that exposes \`window.lantern\` to the renderer; keep it small and typed.
+- \`src/preload/index.ts\` — the bridge that exposes \`window.clarity\` to the renderer; keep it small and typed.
 - \`src/renderer/src/\` — the React app: \`App.tsx\` owns document state; components live in \`components/\`.
 - \`config/csp.ts\` — the Content-Security-Policy. Do not loosen it; a failing test guards each directive.
 

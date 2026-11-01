@@ -5,7 +5,7 @@ import {
   IpcChannel,
   MENU_COMMANDS,
   THEME_SETTINGS,
-  type LanternApi,
+  type ClarityApi,
   type MenuCommand,
   type ThemeSetting,
   type UiSettings,
@@ -32,7 +32,7 @@ function initialTheme(): ThemeSetting {
   return THEME_SETTINGS.find((theme) => theme === value) ?? DEFAULT_UI_SETTINGS.theme
 }
 
-const api: LanternApi = {
+const api: ClarityApi = {
   initialTheme: initialTheme(),
   pickFolder: () => invoke(IpcChannel.PickFolder),
   enterFolder: (rootPath) => invoke(IpcChannel.EnterFolder, rootPath),
@@ -68,4 +68,4 @@ const api: LanternApi = {
   onTreeChanged: (listener) => subscribe(IpcChannel.TreeChanged, () => listener()),
 }
 
-contextBridge.exposeInMainWorld('lantern', api)
+contextBridge.exposeInMainWorld('clarity', api)

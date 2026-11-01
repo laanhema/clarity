@@ -16,7 +16,7 @@ const IMAGE_TYPES: Readonly<Record<string, string>> = {
 
 export const MAX_IMAGE_BYTES = 15 * 1024 * 1024
 
-/** The MIME type for an image file, or null when the extension is not an image type Lantern shows. */
+/** The MIME type for an image file, or null when the extension is not an image type Clarity shows. */
 export function imageMimeType(filePath: string): string | null {
   return IMAGE_TYPES[path.extname(filePath).toLowerCase()] ?? null
 }

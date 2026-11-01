@@ -127,8 +127,8 @@ export async function pruneRecentFolders(
   return recent.filter((_folder, index) => checks[index])
 }
 
-/** The userData folder name of the app before it was renamed to Lantern. */
-export const LEGACY_USER_DATA_FOLDER = 'mdpad'
+/** The userData folder names of the app's earlier names, most recent first. */
+export const LEGACY_USER_DATA_FOLDERS = ['lantern', 'mdpad'] as const
 
 async function exists(file: string): Promise<boolean> {
   try {
@@ -140,12 +140,21 @@ async function exists(file: string): Promise<boolean> {
 }
 
 /**
- * Copies the settings file of the app's old name to `filePath` when
- * `filePath` does not exist yet, so a rename keeps the user's settings.
- * Never changes the old file. Returns whether it copied.
+ * Copies the settings file of the app's most recent old name to `filePath`
+ * when `filePath` does not exist yet, so a rename keeps the user's settings.
+ * `legacyFilePaths` is ordered most recent first; the first one that exists
+ * is copied. Never changes the old files. Returns whether it copied.
  */
-export async function migrateLegacySettings(filePath: string, legacyFilePath: string): Promise<boolean> {
-  if ((await exists(filePath)) || !(await exists(legacyFilePath))) return false
+export async function migrateLegacySettings(filePath: string, legacyFilePaths: readonly string[]): Promise<boolean> {
+  if (await exists(filePath)) return false
+  let legacyFilePath: string | undefined
+  for (const candidate of legacyFilePaths) {
+    if (await exists(candidate)) {
+      legacyFilePath = candidate
+      break
+    }
+  }
+  if (legacyFilePath === undefined) return false
   try {
     await mkdir(path.dirname(filePath), { recursive: true })
     await copyFile(legacyFilePath, filePath, constants.COPYFILE_EXCL)

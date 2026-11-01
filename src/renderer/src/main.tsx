@@ -11,7 +11,7 @@ import { App } from './App'
 import './styles.css'
 
 // Apply the theme before the first render, so the window does not open in another theme's colours.
-document.documentElement.dataset['theme'] = window.lantern.initialTheme
+document.documentElement.dataset['theme'] = window.clarity.initialTheme
 
 const container = document.getElementById('root')
 if (!container) throw new Error('Missing #root element')

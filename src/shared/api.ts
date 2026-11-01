@@ -1,7 +1,7 @@
 /**
  * The contract between the renderer and the main process.
  *
- * The preload script exposes an object of type `LanternApi` as `window.lantern`.
+ * The preload script exposes an object of type `ClarityApi` as `window.clarity`.
  * The renderer never touches the file system directly; every disk operation
  * goes through these calls, and the main process checks every path.
  */
@@ -51,7 +51,7 @@ export const THEME_SETTINGS = [
 ] as const satisfies readonly ThemeSetting[]
 
 /**
- * The one typeface of everything Lantern draws: the sidebar, the editor, the
+ * The one typeface of everything Clarity draws: the sidebar, the editor, the
  * preview and its code, and the status bar, in every theme. Both fonts are
  * bundled and have no ligatures. The native menu bar, title bar and dialogs
  * keep the system font.
@@ -60,7 +60,7 @@ export type FontSetting = 'jetbrains-mono-nl' | 'commit-mono'
 export const FONT_SETTINGS = ['jetbrains-mono-nl', 'commit-mono'] as const satisfies readonly FontSetting[]
 
 /** The command-line switch that hands a new window's theme to its preload script, so the first paint is right. */
-export const INITIAL_THEME_SWITCH = '--lantern-theme='
+export const INITIAL_THEME_SWITCH = '--clarity-theme='
 
 /** The settings the renderer can see and change. The main process stores them in userData. */
 export interface UiSettings {
@@ -91,7 +91,7 @@ export const SIDEBAR_WIDTH_RANGE = { min: 160, max: 600 } as const
 export const EDITOR_FRACTION_RANGE = { min: 0.15, max: 0.85 } as const
 export const FONT_SIZE_RANGE = { min: 10, max: 28 } as const
 
-export interface LanternApi {
+export interface ClarityApi {
   /** The theme setting when the window opened, available before `getSettings` resolves. */
   readonly initialTheme: ThemeSetting
   /**
@@ -146,28 +146,28 @@ export interface LanternApi {
 }
 
 export const IpcChannel = {
-  PickFolder: 'lantern:pick-folder',
-  EnterFolder: 'lantern:enter-folder',
-  OpenFile: 'lantern:open-file',
-  ListMarkdownFiles: 'lantern:list-markdown-files',
-  ReadFile: 'lantern:read-file',
-  WriteFile: 'lantern:write-file',
-  SaveAs: 'lantern:save-as',
-  ConfirmUnsaved: 'lantern:confirm-unsaved',
-  ConfirmReload: 'lantern:confirm-reload',
-  SetDocumentDirty: 'lantern:set-document-dirty',
-  CloseWindow: 'lantern:close-window',
-  WatchDocument: 'lantern:watch-document',
-  LoadImage: 'lantern:load-image',
-  OpenExternal: 'lantern:open-external',
-  GetSettings: 'lantern:get-settings',
-  UpdateSettings: 'lantern:update-settings',
-  MenuCommand: 'lantern:menu-command',
-  CloseRequested: 'lantern:close-requested',
-  SettingsChanged: 'lantern:settings-changed',
-  FolderPicked: 'lantern:folder-picked',
-  DocumentChanged: 'lantern:document-changed',
-  TreeChanged: 'lantern:tree-changed',
+  PickFolder: 'clarity:pick-folder',
+  EnterFolder: 'clarity:enter-folder',
+  OpenFile: 'clarity:open-file',
+  ListMarkdownFiles: 'clarity:list-markdown-files',
+  ReadFile: 'clarity:read-file',
+  WriteFile: 'clarity:write-file',
+  SaveAs: 'clarity:save-as',
+  ConfirmUnsaved: 'clarity:confirm-unsaved',
+  ConfirmReload: 'clarity:confirm-reload',
+  SetDocumentDirty: 'clarity:set-document-dirty',
+  CloseWindow: 'clarity:close-window',
+  WatchDocument: 'clarity:watch-document',
+  LoadImage: 'clarity:load-image',
+  OpenExternal: 'clarity:open-external',
+  GetSettings: 'clarity:get-settings',
+  UpdateSettings: 'clarity:update-settings',
+  MenuCommand: 'clarity:menu-command',
+  CloseRequested: 'clarity:close-requested',
+  SettingsChanged: 'clarity:settings-changed',
+  FolderPicked: 'clarity:folder-picked',
+  DocumentChanged: 'clarity:document-changed',
+  TreeChanged: 'clarity:tree-changed',
 } as const
 
 export const MARKDOWN_EXTENSIONS = ['.md', '.markdown'] as const

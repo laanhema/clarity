@@ -21,8 +21,8 @@ vi.mock('mermaid', () => ({
   },
 }))
 
-const SVG = `<svg id="lantern-mermaid-1" xmlns="http://www.w3.org/2000/svg" style="max-width: 200px;" onload="alert(1)">
-<style>#lantern-mermaid-1{fill:#333;}</style>
+const SVG = `<svg id="clarity-mermaid-1" xmlns="http://www.w3.org/2000/svg" style="max-width: 200px;" onload="alert(1)">
+<style>#clarity-mermaid-1{fill:#333;}</style>
 <script>alert(2)</script>
 <g class="node" onclick="alert(3)"><rect width="10" height="10" style="fill:red"/></g>
 <a href="javascript:alert(4)" xlink:href="https://example.com"><text>link</text></a>
@@ -37,7 +37,7 @@ describe('parseMermaidSvg', () => {
   const markup = svg.outerHTML
 
   it('takes the stylesheet out of the SVG', () => {
-    expect(css).toBe('#lantern-mermaid-1{fill:#333;}')
+    expect(css).toBe('#clarity-mermaid-1{fill:#333;}')
     expect(svg.querySelector('style')).toBeNull()
   })
 

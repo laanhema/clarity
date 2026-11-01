@@ -271,7 +271,7 @@ export function applyInlineStyles(root: ParentNode): void {
  * Every diagram renders with the same id: renders run one at a time, and each
  * finished SVG lives in its own shadow root, where ids cannot clash.
  */
-const RENDER_ID = 'lantern-mermaid'
+const RENDER_ID = 'clarity-mermaid'
 
 /** Mermaid's CSS by palette, font, diagram type and `%%{init}%%` config, from the last render of that kind. */
 const cssByKind = new Map<string, string>()

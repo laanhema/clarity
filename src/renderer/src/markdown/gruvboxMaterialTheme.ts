@@ -4,7 +4,7 @@ import type { ThemeRegistration } from '@shikijs/types'
  * Code colours for the Gruvbox Material Dark Hard theme (sainnhe/gruvbox-material,
  * background "hard", foreground "material", default options: only comments
  * are italic). Shiki's bundled `gruvbox-dark-hard` is the original Gruvbox
- * palette, so Lantern defines its own from the Neovim theme's syntax groups.
+ * palette, so Clarity defines its own from the Neovim theme's syntax groups.
  */
 const palette = {
   bg1: '#282828',

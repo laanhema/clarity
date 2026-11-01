@@ -14,4 +14,4 @@ JetBrains publishes the NL faces only as TTF, and they are not on npm. These wof
   font.save('JetBrainsMonoNL-Regular.woff2')
   ```
 
-Lantern uses weights 400, 600 and 700 and the 400 and 700 italics.
+Clarity uses weights 400, 600 and 700 and the 400 and 700 italics.

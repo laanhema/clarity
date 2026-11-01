@@ -2,7 +2,7 @@ import { act } from '@testing-library/react'
 import { vi } from 'vitest'
 import {
   DEFAULT_UI_SETTINGS,
-  type LanternApi,
+  type ClarityApi,
   type MenuCommand,
   type ThemeSetting,
   type UiSettings,
@@ -21,7 +21,7 @@ function listenerSet<T extends unknown[]>() {
   }
 }
 
-/** Installs a fake `window.lantern` whose calls tests can inspect and steer. */
+/** Installs a fake `window.clarity` whose calls tests can inspect and steer. */
 export function installMockApi() {
   const menu = listenerSet<[MenuCommand]>()
   const close = listenerSet<[]>()
@@ -32,31 +32,31 @@ export function installMockApi() {
 
   const api = {
     initialTheme: 'system' as ThemeSetting,
-    pickFolder: vi.fn<LanternApi['pickFolder']>().mockResolvedValue(null),
-    enterFolder: vi.fn<LanternApi['enterFolder']>().mockResolvedValue(null),
-    openFile: vi.fn<LanternApi['openFile']>().mockResolvedValue(null),
-    listMarkdownFiles: vi.fn<LanternApi['listMarkdownFiles']>().mockResolvedValue([]),
-    readFile: vi.fn<LanternApi['readFile']>().mockResolvedValue(''),
-    writeFile: vi.fn<LanternApi['writeFile']>().mockResolvedValue(undefined),
-    saveAs: vi.fn<LanternApi['saveAs']>().mockResolvedValue(null),
-    confirmUnsaved: vi.fn<LanternApi['confirmUnsaved']>().mockResolvedValue('cancel'),
-    confirmReload: vi.fn<LanternApi['confirmReload']>().mockResolvedValue('keep'),
-    setDocumentDirty: vi.fn<LanternApi['setDocumentDirty']>(),
-    closeWindow: vi.fn<LanternApi['closeWindow']>(),
-    watchDocument: vi.fn<LanternApi['watchDocument']>().mockResolvedValue(undefined),
-    loadImage: vi.fn<LanternApi['loadImage']>().mockResolvedValue(null),
-    openExternal: vi.fn<LanternApi['openExternal']>(),
-    getSettings: vi.fn<LanternApi['getSettings']>().mockResolvedValue(DEFAULT_UI_SETTINGS),
-    updateSettings: vi.fn<LanternApi['updateSettings']>(),
-    onMenuCommand: vi.fn<LanternApi['onMenuCommand']>(menu.subscribe),
-    onCloseRequested: vi.fn<LanternApi['onCloseRequested']>(close.subscribe),
-    onSettingsChanged: vi.fn<LanternApi['onSettingsChanged']>(settings.subscribe),
-    onFolderPicked: vi.fn<LanternApi['onFolderPicked']>(folderPicked.subscribe),
-    onDocumentChanged: vi.fn<LanternApi['onDocumentChanged']>(documentChanged.subscribe),
-    onTreeChanged: vi.fn<LanternApi['onTreeChanged']>(treeChanged.subscribe),
-  } satisfies LanternApi
+    pickFolder: vi.fn<ClarityApi['pickFolder']>().mockResolvedValue(null),
+    enterFolder: vi.fn<ClarityApi['enterFolder']>().mockResolvedValue(null),
+    openFile: vi.fn<ClarityApi['openFile']>().mockResolvedValue(null),
+    listMarkdownFiles: vi.fn<ClarityApi['listMarkdownFiles']>().mockResolvedValue([]),
+    readFile: vi.fn<ClarityApi['readFile']>().mockResolvedValue(''),
+    writeFile: vi.fn<ClarityApi['writeFile']>().mockResolvedValue(undefined),
+    saveAs: vi.fn<ClarityApi['saveAs']>().mockResolvedValue(null),
+    confirmUnsaved: vi.fn<ClarityApi['confirmUnsaved']>().mockResolvedValue('cancel'),
+    confirmReload: vi.fn<ClarityApi['confirmReload']>().mockResolvedValue('keep'),
+    setDocumentDirty: vi.fn<ClarityApi['setDocumentDirty']>(),
+    closeWindow: vi.fn<ClarityApi['closeWindow']>(),
+    watchDocument: vi.fn<ClarityApi['watchDocument']>().mockResolvedValue(undefined),
+    loadImage: vi.fn<ClarityApi['loadImage']>().mockResolvedValue(null),
+    openExternal: vi.fn<ClarityApi['openExternal']>(),
+    getSettings: vi.fn<ClarityApi['getSettings']>().mockResolvedValue(DEFAULT_UI_SETTINGS),
+    updateSettings: vi.fn<ClarityApi['updateSettings']>(),
+    onMenuCommand: vi.fn<ClarityApi['onMenuCommand']>(menu.subscribe),
+    onCloseRequested: vi.fn<ClarityApi['onCloseRequested']>(close.subscribe),
+    onSettingsChanged: vi.fn<ClarityApi['onSettingsChanged']>(settings.subscribe),
+    onFolderPicked: vi.fn<ClarityApi['onFolderPicked']>(folderPicked.subscribe),
+    onDocumentChanged: vi.fn<ClarityApi['onDocumentChanged']>(documentChanged.subscribe),
+    onTreeChanged: vi.fn<ClarityApi['onTreeChanged']>(treeChanged.subscribe),
+  } satisfies ClarityApi
 
-  window.lantern = api
+  window.clarity = api
 
   return {
     api,

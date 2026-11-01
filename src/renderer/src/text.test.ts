@@ -20,7 +20,7 @@ describe('fileName', () => {
 
 describe('errorMessage', () => {
   it('strips the Electron IPC prefix', () => {
-    const error = new Error("Error invoking remote method 'lantern:read-file': PathAccessError: Path is outside the open folder")
+    const error = new Error("Error invoking remote method 'clarity:read-file': PathAccessError: Path is outside the open folder")
     expect(errorMessage(error)).toBe('Path is outside the open folder')
   })
 
