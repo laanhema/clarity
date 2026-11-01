@@ -31,6 +31,8 @@
   --editor-lh: 1.6;
   --editor-pad-y: 16px;
   --editor-pad-x: 20px;
+  /* The width of the text column in preview-only and editor-only view. */
+  --content-column: 860px;
 }
 
 :root[data-font='jetbrains-mono-nl'] {
@@ -452,6 +454,11 @@ samp {
   flex-direction: column;
 }
 
+/* Editor-only view centres the text in the preview's column; see editorTheme in Editor.tsx. */
+.editor-pane.editor-column {
+  --editor-column: var(--content-column);
+}
+
 .preview-pane {
   overflow: auto;
   padding: 12px 18px 40px;
@@ -460,7 +467,7 @@ samp {
 /* Preview: GitHub-like Markdown styles */
 
 .markdown-body {
-  max-width: 860px;
+  max-width: var(--content-column);
   margin: 0 auto;
   /* 15px at the default size of 14px. */
   font-size: calc(var(--content-size) * 15 / 14);

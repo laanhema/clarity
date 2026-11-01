@@ -27,6 +27,8 @@ export interface EditorProps {
   documentKey: number
   onChange: (value: string) => void
   hidden?: boolean
+  /** Lays the text out in the preview's centred column, for editor-only view. */
+  column?: boolean
   ref?: Ref<EditorHandle>
 }
 
@@ -47,7 +49,11 @@ const editorTheme = EditorView.theme({
     transitionDuration: 'var(--scrollbar-fade-in)',
   },
   '.cm-content': { padding: 'var(--editor-pad-y) 0', caretColor: 'var(--fg)' },
-  '.cm-line': { padding: '0 var(--editor-pad-x)' },
+  // In editor-only view the pane sets --editor-column, and the side padding
+  // grows so the text fills a centred column of that width, where the preview
+  // puts its text. The lines stay full width, so the active line, selections
+  // and clicks in the margins still reach across the pane.
+  '.cm-line': { padding: '0 max(var(--editor-pad-x), (100% - var(--editor-column, 100%)) / 2)' },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--fg)' },
   '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, ::selection':
     { backgroundColor: 'var(--editor-selection)' },
@@ -110,7 +116,7 @@ function createState(doc: string, { onDocChanged, onPaneChange }: StateCallbacks
 }
 
 /** The Markdown source editor (CodeMirror 6): undo/redo, search and replace, line wrapping. */
-export function Editor({ value, documentKey, onChange, hidden = false, ref }: EditorProps) {
+export function Editor({ value, documentKey, onChange, hidden = false, column = false, ref }: EditorProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   // The text this editor last reported, so the echo of its own change is not applied back.
@@ -207,5 +213,12 @@ export function Editor({ value, documentKey, onChange, hidden = false, ref }: Ed
     [],
   )
 
-  return <section className="pane editor-pane" aria-label="Editor" hidden={hidden} ref={hostRef} />
+  return (
+    <section
+      className={column ? 'pane editor-pane editor-column' : 'pane editor-pane'}
+      aria-label="Editor"
+      hidden={hidden}
+      ref={hostRef}
+    />
+  )
 }

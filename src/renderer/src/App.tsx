@@ -379,6 +379,7 @@ export function App() {
           value={doc.content}
           documentKey={doc.key}
           hidden={!showEditor}
+          column={viewMode === 'editor'}
           onChange={(content) => setDoc((current) => ({ ...current, content }))}
         />
         {viewMode === 'split' && (

@@ -336,6 +336,21 @@ describe('view modes and settings', () => {
     expect(screen.queryByRole('separator', { name: 'Resize editor and preview' })).not.toBeInTheDocument()
   })
 
+  it('centres the editor text in the preview column only in editor-only view', async () => {
+    mock.api.getSettings.mockResolvedValue({ ...DEFAULT_UI_SETTINGS, viewMode: 'editor' })
+    render(<App />)
+    await waitFor(() => expect(pane('Editor')).toHaveClass('editor-column'))
+
+    mock.changeSettings({ ...DEFAULT_UI_SETTINGS, viewMode: 'split' })
+    expect(pane('Editor')).not.toHaveClass('editor-column')
+  })
+
+  // The editor column and the preview column must share one width.
+  it('sizes the editor column and the preview column from the same variable', () => {
+    expect(styles).toMatch(/\.editor-pane\.editor-column \{\s*--editor-column: var\(--content-column\);/)
+    expect(styles).toMatch(/\.markdown-body \{\s*max-width: var\(--content-column\);/)
+  })
+
   it('cycles the theme from the status bar', async () => {
     const user = userEvent.setup()
     mock.api.getSettings.mockResolvedValue({ ...DEFAULT_UI_SETTINGS, theme: 'system' })
