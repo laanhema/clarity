@@ -97,7 +97,7 @@ describe('unsaved changes', () => {
 
   it('estimates the tokens of the unsaved text once typing pauses', async () => {
     await openFirstFileAndEdit()
-    await waitFor(() => expect(screen.getByText(/^≈\d+ tokens$/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/^≈ \d+ tokens$/)).toBeInTheDocument())
   })
 
   it('switches files without asking when there are no changes', async () => {

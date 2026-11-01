@@ -15,7 +15,7 @@ const props: StatusBarProps = {
 describe('StatusBar token estimate', () => {
   it('shows a short approximate count with the exact estimate and method in its tooltip', () => {
     render(<StatusBar {...props} />)
-    const count = screen.getByText('≈3.2k tokens')
+    const count = screen.getByText('≈ 3.2k tokens')
     const tooltip = screen.getByRole('tooltip')
     expect(count.parentElement).toHaveAccessibleDescription(expect.stringContaining('≈3,249 tokens for Claude Opus 5.5'))
     expect(tooltip).toHaveTextContent('Estimated offline')
