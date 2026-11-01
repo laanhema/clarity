@@ -129,7 +129,7 @@ describe('unsaved changes', () => {
 
     await waitFor(() => expect(editorText()).toBe('# Second'))
     expect(mock.api.writeFile).not.toHaveBeenCalled()
-    expect(screen.getByText('Saved')).toBeInTheDocument()
+    expect(screen.queryByText('Unsaved')).not.toBeInTheDocument()
   })
 
   it('saves first and then switches when the user saves', async () => {
@@ -174,7 +174,7 @@ describe('saving', () => {
     await openFirstFileAndEdit()
     mock.sendMenuCommand('save')
 
-    await waitFor(() => expect(screen.getByText('Saved')).toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('Unsaved')).not.toBeInTheDocument())
     expect(mock.api.writeFile).toHaveBeenCalledWith('/notes/first.md', '# First edited')
     expect(screen.queryByRole('img', { name: 'Unsaved changes' })).not.toBeInTheDocument()
     expect(mock.api.setDocumentDirty).toHaveBeenLastCalledWith(false)
@@ -189,7 +189,7 @@ describe('saving', () => {
     await waitFor(() => expect(screen.getByText('/notes/fresh.md')).toBeInTheDocument())
     expect(mock.api.saveAs).toHaveBeenCalledWith('Fresh words', null)
     expect(mock.api.writeFile).not.toHaveBeenCalled()
-    expect(screen.getByText('Saved')).toBeInTheDocument()
+    expect(screen.queryByText('Unsaved')).not.toBeInTheDocument()
   })
 
   it('keeps the document unsaved when Save As is cancelled', async () => {
@@ -476,13 +476,13 @@ describe('changes made by other programs', () => {
     mock.changeDocumentOnDisk('/notes/first.md')
     await waitFor(() => expect(editorText()).toBe('# Changed elsewhere'))
     expect(mock.api.confirmReload).not.toHaveBeenCalled()
-    expect(screen.getByText('Saved')).toBeInTheDocument()
+    expect(screen.queryByText('Unsaved')).not.toBeInTheDocument()
   })
 
   it('ignores the echo of its own save', async () => {
     await openFirstFileAndEdit()
     mock.sendMenuCommand('save')
-    await waitFor(() => expect(screen.getByText('Saved')).toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('Unsaved')).not.toBeInTheDocument())
     mock.api.readFile.mockResolvedValue('# First edited')
     mock.changeDocumentOnDisk('/notes/first.md')
     await waitFor(() => expect(mock.api.readFile).toHaveBeenLastCalledWith('/notes/first.md'))
@@ -506,7 +506,7 @@ describe('changes made by other programs', () => {
     mock.api.confirmReload.mockResolvedValue('reload')
     mock.changeDocumentOnDisk('/notes/first.md')
     await waitFor(() => expect(editorText()).toBe('# Theirs'))
-    expect(screen.getByText('Saved')).toBeInTheDocument()
+    expect(screen.queryByText('Unsaved')).not.toBeInTheDocument()
   })
 
   it('marks a deleted file as unsaved', async () => {

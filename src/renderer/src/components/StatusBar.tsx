@@ -37,16 +37,15 @@ export function StatusBar({ path, dirty, wordCount, tokenCount, message, theme, 
           {message}
         </span>
       )}
+      {/* Stays mounted while empty so screen readers hear "Unsaved" appear. */}
       <span className="status-state" aria-live="polite">
-        {dirty ? (
+        {dirty && (
           <>
             <span className="unsaved-dot" aria-hidden="true">
               ●
             </span>{' '}
             Unsaved
           </>
-        ) : (
-          'Saved'
         )}
       </span>
       <span className="status-words">

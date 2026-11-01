@@ -768,6 +768,15 @@ samp {
   font-variant-numeric: tabular-nums;
 }
 
+/* With nothing to say the live region leaves the flex row, so it adds no gap. */
+.status-state:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
 .status-path {
   flex: 1;
   min-width: 0;

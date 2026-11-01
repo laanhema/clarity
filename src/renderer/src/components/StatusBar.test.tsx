@@ -27,3 +27,18 @@ describe('StatusBar token estimate', () => {
     expect(screen.getByText('0 tokens')).toBeInTheDocument()
   })
 })
+
+describe('StatusBar save state', () => {
+  it('says nothing about saving while the document is clean', () => {
+    const { container } = render(<StatusBar {...props} />)
+    const state = container.querySelector('.status-state')
+    expect(state).toHaveAttribute('aria-live', 'polite')
+    expect(state).toBeEmptyDOMElement()
+    expect(screen.queryByText(/saved/i)).not.toBeInTheDocument()
+  })
+
+  it('shows the unsaved marker while the document has changes', () => {
+    const { container } = render(<StatusBar {...props} dirty />)
+    expect(container.querySelector('.status-state')).toHaveTextContent('● Unsaved')
+  })
+})

@@ -2,7 +2,7 @@
 
 A simple desktop Markdown reader and editor, built with Electron, React and TypeScript.
 
-Open a folder, pick a Markdown file from the sidebar, and edit it with a live preview next to it. The window has a folder sidebar, a code editor, a preview and a status bar showing the file path, whether it is saved, a word count and the theme.
+Open a folder, pick a Markdown file from the sidebar, and edit it with a live preview next to it. The window has a folder sidebar, a code editor, a preview and a status bar showing the file path, an "Unsaved" marker while there are unsaved changes, a word count and the theme.
 
 ## Features
 
