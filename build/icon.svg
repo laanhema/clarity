@@ -1,17 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect x="32" y="32" width="448" height="448" rx="96" fill="#2e6be6"/>
-  <!-- Two panes: source lines on the left, a rendered page on the right. -->
-  <rect x="96" y="128" width="148" height="256" rx="20" fill="#ffffff" fill-opacity="0.22"/>
-  <rect x="120" y="164" width="100" height="18" rx="9" fill="#ffffff"/>
-  <rect x="120" y="204" width="76" height="14" rx="7" fill="#ffffff" fill-opacity="0.85"/>
-  <rect x="120" y="234" width="92" height="14" rx="7" fill="#ffffff" fill-opacity="0.85"/>
-  <rect x="120" y="264" width="64" height="14" rx="7" fill="#ffffff" fill-opacity="0.85"/>
-  <rect x="120" y="294" width="84" height="14" rx="7" fill="#ffffff" fill-opacity="0.85"/>
-  <rect x="268" y="128" width="148" height="256" rx="20" fill="#ffffff"/>
-  <rect x="292" y="160" width="100" height="26" rx="8" fill="#2e6be6"/>
-  <rect x="292" y="206" width="100" height="12" rx="6" fill="#9db8f2"/>
-  <rect x="292" y="232" width="80" height="12" rx="6" fill="#9db8f2"/>
-  <rect x="292" y="268" width="100" height="56" rx="8" fill="#e7eefc"/>
-  <rect x="304" y="284" width="60" height="10" rx="5" fill="#2e6be6"/>
-  <rect x="304" y="302" width="40" height="10" rx="5" fill="#d4740b"/>
+  <!-- D. Facet: a cut gem - "clarity" as in a diamond's grade. Tokyo Night Moon palette. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2d45"/>
+      <stop offset="1" stop-color="#1e2030"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="448" height="448" rx="100" fill="url(#tile)"/>
+  <rect x="35" y="35" width="442" height="442" rx="97" fill="none" stroke="#c8d3f5" stroke-opacity="0.12" stroke-width="6"/>
+  <g stroke="#222436" stroke-width="4" stroke-linejoin="round">
+    <polygon points="122,222 186,148 208,222" fill="#c8d3f5"/>
+    <polygon points="186,148 256,148 208,222" fill="#e4eaff"/>
+    <polygon points="256,148 208,222 304,222" fill="#a8c0ff"/>
+    <polygon points="256,148 326,148 304,222" fill="#c8d3f5"/>
+    <polygon points="326,148 390,222 304,222" fill="#82aaff"/>
+    <polygon points="122,222 208,222 256,396" fill="#82aaff"/>
+    <polygon points="208,222 304,222 256,396" fill="#5f87e8"/>
+    <polygon points="304,222 390,222 256,396" fill="#3e68d7"/>
+  </g>
 </svg>
