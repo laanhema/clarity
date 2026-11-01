@@ -17,5 +17,5 @@ export function nativeThemeSource(theme: ThemeSetting): 'system' | 'light' | 'da
  * theme's page background, so opening a window does not flash.
  */
 export function windowBackground(theme: ThemeSetting, darkColors: boolean): string {
-  return DARK_THEME_BACKGROUNDS[theme] ?? (darkColors ? '#1e1f22' : '#ffffff')
+  return DARK_THEME_BACKGROUNDS[theme] ?? (darkColors ? '#0d1117' : '#ffffff')
 }

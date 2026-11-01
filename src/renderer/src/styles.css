@@ -37,28 +37,36 @@
   --font-app: 'JetBrains Mono NL', ui-monospace, monospace;
 }
 
+/*
+ * Dark: GitHub's default dark mode, from Primer's "dark" theme
+ * (@primer/primitives dist/css/functional/themes/dark.css). The editor's
+ * Markdown colours follow the github-dark-default code theme.
+ */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1e1f22;
-    --bg-sidebar: #191a1c;
-    --bg-hover: rgba(255, 255, 255, 0.06);
-    --bg-active: rgba(110, 158, 255, 0.18);
-    --fg: #e3e5e8;
-    --fg-muted: #9aa0a6;
-    --border: #303236;
-    --accent: #6e9eff;
-    --unsaved: #f0a64a;
-    --danger: #ff7b8a;
-    --dir: #8cb4ff;
-    --md-heading: #8cb4ff;
-    --md-link: #6e9eff;
-    --md-code: #f0a070;
-    --md-mark: #6e7681;
-    --editor-selection: rgba(110, 158, 255, 0.28);
-    --editor-active-line: rgba(255, 255, 255, 0.035);
-    --editor-match: rgba(234, 179, 8, 0.22);
-    --editor-match-selected: rgba(234, 179, 8, 0.45);
-    --code-bg: #26282c;
+    --bg: #0d1117;
+    --bg-sidebar: #010409;
+    --bg-stripe: #151b23;
+    --bg-hover: rgba(101, 108, 118, 0.2);
+    --bg-active: rgba(56, 139, 253, 0.1);
+    --fg: #f0f6fc;
+    --fg-muted: #9198a1;
+    --border: #3d444d;
+    --accent: #4493f8;
+    --unsaved: #d29922;
+    --danger: #f85149;
+    --dir: #4493f8;
+    --md-heading: #79c0ff;
+    --md-link: #a5d6ff;
+    --md-code: #79c0ff;
+    --md-mark: #9198a1;
+    --md-list: #ffa657;
+    --editor-selection: rgba(56, 139, 253, 0.4);
+    --editor-active-line: rgba(101, 108, 118, 0.2);
+    --editor-match: rgba(187, 128, 9, 0.3);
+    --editor-match-selected: rgba(210, 153, 34, 0.55);
+    --code-bg: #151b23;
+    --inline-code-bg: rgba(101, 108, 118, 0.2);
   }
 }
 
@@ -489,7 +497,7 @@ samp {
 .markdown-body :not(pre) > code {
   padding: 0.2em 0.4em;
   border-radius: 6px;
-  background: var(--code-bg);
+  background: var(--inline-code-bg, var(--code-bg));
 }
 
 .markdown-body kbd {
@@ -533,7 +541,7 @@ samp {
 }
 
 .markdown-body tr:nth-child(2n) {
-  background: var(--bg-sidebar);
+  background: var(--bg-stripe, var(--bg-sidebar));
 }
 
 /* YAML frontmatter: a key/value table above the body, as on GitHub. */
@@ -653,8 +661,9 @@ samp {
     text-decoration: var(--shiki-dark-text-decoration);
   }
 
+  /* github-dark-default paints code on the page colour; GitHub sets code blocks apart with --code-bg. */
   .markdown-body pre.shiki {
-    background-color: var(--shiki-dark-bg);
+    background-color: var(--code-bg);
   }
 }
 

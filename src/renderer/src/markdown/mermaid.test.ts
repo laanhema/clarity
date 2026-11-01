@@ -102,7 +102,7 @@ describe('mermaidConfig', () => {
       return [variables['background'], variables['primaryBorderColor'], variables['darkMode']]
     }
     expect(palette('light')).toEqual(['#ffffff', '#2e6be6', false])
-    expect(palette('dark')).toEqual(['#1e1f22', '#6e9eff', true])
+    expect(palette('dark')).toEqual(['#0d1117', '#4493f8', true])
     expect(palette('gruvbox-material-dark-hard')).toEqual(['#1d2021', '#e78a4e', true])
     expect(palette('tokyo-night-moon')).toEqual(['#222436', '#82aaff', true])
   })

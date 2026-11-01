@@ -87,7 +87,7 @@ export function grammarFor(language: string): string | null {
  */
 export const THEMES = {
   light: 'github-light',
-  dark: 'github-dark',
+  dark: 'github-dark-default',
   gruvbox: gruvboxMaterialDarkHard.name,
   tokyo: tokyoNightMoon.name,
 } as const
@@ -99,7 +99,7 @@ function getHighlighter(): Promise<HighlighterCore> {
   highlighterPromise ??= createHighlighterCore({
     themes: [
       import('@shikijs/themes/github-light'),
-      import('@shikijs/themes/github-dark'),
+      import('@shikijs/themes/github-dark-default'),
       gruvboxMaterialDarkHard,
       tokyoNightMoon,
     ],

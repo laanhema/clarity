@@ -14,8 +14,8 @@ describe('nativeThemeSource', () => {
 describe('windowBackground', () => {
   it('matches the page background of each theme', () => {
     expect(windowBackground('light', false)).toBe('#ffffff')
-    expect(windowBackground('dark', true)).toBe('#1e1f22')
-    expect(windowBackground('system', true)).toBe('#1e1f22')
+    expect(windowBackground('dark', true)).toBe('#0d1117')
+    expect(windowBackground('system', true)).toBe('#0d1117')
     expect(windowBackground('system', false)).toBe('#ffffff')
     expect(windowBackground('gruvbox-material-dark-hard', true)).toBe('#1d2021')
     expect(windowBackground('tokyo-night-moon', false)).toBe('#222436')

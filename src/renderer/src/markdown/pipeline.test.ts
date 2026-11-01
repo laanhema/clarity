@@ -135,7 +135,7 @@ describe('code highlighting', () => {
 
   it('colours code blocks with the variables of every theme', async () => {
     const out = toHtml(await renderMarkdown('```ts\nconst answer: number = 42\n```'))
-    expect(out).toContain('class="shiki shiki-themes github-light github-dark gruvbox-material-dark-hard tokyo-night-moon"')
+    expect(out).toContain('class="shiki shiki-themes github-light github-dark-default gruvbox-material-dark-hard tokyo-night-moon"')
     expect(out).toMatch(
       /style="[^"]*--shiki-light:#[0-9a-f]+;--shiki-dark:#[0-9a-f]+;--shiki-gruvbox:#[0-9a-f]+;--shiki-tokyo:#[0-9a-f]+/i,
     )
