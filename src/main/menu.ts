@@ -8,6 +8,7 @@ import {
   type UiSettings,
   type ViewMode,
 } from '../shared/api'
+import { menuAccelerator, type MenuShortcutId } from '../shared/shortcuts'
 
 export interface MenuOptions {
   isMac: boolean
@@ -32,10 +33,10 @@ function sendCommand(command: MenuCommand) {
   }
 }
 
-const VIEW_ITEMS: { mode: ViewMode; label: string; accelerator: string }[] = [
-  { mode: 'editor', label: 'Editor Only', accelerator: 'CmdOrCtrl+1' },
-  { mode: 'split', label: 'Editor and Preview', accelerator: 'CmdOrCtrl+2' },
-  { mode: 'preview', label: 'Preview Only', accelerator: 'CmdOrCtrl+3' },
+const VIEW_ITEMS: { mode: ViewMode; label: string; shortcut: MenuShortcutId }[] = [
+  { mode: 'editor', label: 'Editor Only', shortcut: 'view-editor' },
+  { mode: 'split', label: 'Editor and Preview', shortcut: 'view-split' },
+  { mode: 'preview', label: 'Preview Only', shortcut: 'view-preview' },
 ]
 
 const THEME_ITEMS: { theme: ThemeSetting; label: string }[] = [
@@ -81,13 +82,13 @@ export function buildMenu(options: MenuOptions): Menu {
   template.push({
     label: 'File',
     submenu: [
-      { label: 'New', accelerator: 'CmdOrCtrl+N', click: sendCommand('new-file') },
-      { label: 'Open File…', accelerator: 'CmdOrCtrl+O', click: sendCommand('open-file') },
-      { label: 'Open Folder…', accelerator: 'CmdOrCtrl+Shift+O', click: sendCommand('open-folder') },
+      { label: 'New', accelerator: menuAccelerator('new-file'), click: sendCommand('new-file') },
+      { label: 'Open File…', accelerator: menuAccelerator('open-file'), click: sendCommand('open-file') },
+      { label: 'Open Folder…', accelerator: menuAccelerator('open-folder'), click: sendCommand('open-folder') },
       { label: 'Open Recent', submenu: recentSubmenu(options) },
       { type: 'separator' },
-      { label: 'Save', accelerator: 'CmdOrCtrl+S', click: sendCommand('save') },
-      { label: 'Save As…', accelerator: 'CmdOrCtrl+Shift+S', click: sendCommand('save-as') },
+      { label: 'Save', accelerator: menuAccelerator('save'), click: sendCommand('save') },
+      { label: 'Save As…', accelerator: menuAccelerator('save-as'), click: sendCommand('save-as') },
       { type: 'separator' },
       isMac ? { role: 'close' } : { role: 'quit' },
     ],
@@ -97,15 +98,15 @@ export function buildMenu(options: MenuOptions): Menu {
     label: 'Edit',
     submenu: [
       // Undo and redo go to the renderer, which applies them to the editor's own history.
-      { label: 'Undo', accelerator: 'CmdOrCtrl+Z', click: sendCommand('undo') },
-      { label: 'Redo', accelerator: 'CmdOrCtrl+Shift+Z', click: sendCommand('redo') },
+      { label: 'Undo', accelerator: menuAccelerator('undo'), click: sendCommand('undo') },
+      { label: 'Redo', accelerator: menuAccelerator('redo'), click: sendCommand('redo') },
       { type: 'separator' },
       { role: 'cut' },
       { role: 'copy' },
       { role: 'paste' },
       { role: 'selectAll' },
       { type: 'separator' },
-      { label: 'Find and Replace…', accelerator: 'CmdOrCtrl+F', click: sendCommand('find') },
+      { label: 'Find and Replace…', accelerator: menuAccelerator('find'), click: sendCommand('find') },
     ],
   })
 
@@ -113,9 +114,9 @@ export function buildMenu(options: MenuOptions): Menu {
     label: 'View',
     submenu: [
       ...VIEW_ITEMS.map(
-        ({ mode, label, accelerator }): MenuItemConstructorOptions => ({
+        ({ mode, label, shortcut }): MenuItemConstructorOptions => ({
           label,
-          accelerator,
+          accelerator: menuAccelerator(shortcut),
           type: 'radio',
           checked: ui.viewMode === mode,
           click: () => options.setViewMode(mode),
@@ -168,6 +169,17 @@ export function buildMenu(options: MenuOptions): Menu {
   })
 
   template.push({ role: 'windowMenu' })
+
+  template.push({
+    role: 'help',
+    submenu: [
+      {
+        label: 'Keyboard Shortcuts',
+        accelerator: menuAccelerator('show-shortcuts'),
+        click: sendCommand('show-shortcuts'),
+      },
+    ],
+  })
 
   return Menu.buildFromTemplate(template)
 }

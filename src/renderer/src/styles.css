@@ -901,6 +901,154 @@ samp {
   color: var(--fg);
 }
 
+/* Keyboard Shortcuts panel (Help → Keyboard Shortcuts) */
+
+.shortcuts {
+  width: min(720px, calc(100vw - 48px));
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: 1px solid var(--rule, var(--border));
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+}
+
+.shortcuts::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.shortcuts-content {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 64px);
+}
+
+.shortcuts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 10px 20px;
+  border-bottom: 1px solid var(--rule, var(--border));
+}
+
+.shortcuts-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.shortcuts-close {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.shortcuts-close:hover,
+.shortcuts-close:focus-visible {
+  border-color: var(--border);
+  background: var(--bg-hover);
+  color: var(--fg);
+  outline: none;
+}
+
+.shortcuts-body {
+  overflow: auto;
+  padding: 4px 20px 18px;
+  columns: 2 300px;
+  column-gap: 32px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-visible) transparent;
+}
+
+.shortcut-group {
+  break-inside: avoid;
+  padding-top: 14px;
+}
+
+.shortcut-group h3 {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shortcut-group dl {
+  margin: 0;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.shortcut-row + .shortcut-row {
+  border-top: 1px solid color-mix(in srgb, var(--rule, var(--border)) 60%, transparent);
+}
+
+.shortcut-row dt {
+  min-width: 0;
+}
+
+.shortcut-note {
+  display: block;
+  color: var(--fg-muted);
+  font-size: 11px;
+}
+
+.shortcut-row dd {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.shortcut-keys {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.keycap {
+  display: inline-block;
+  min-width: 1.8em;
+  padding: 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--fg-muted) 45%, transparent);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--bg-sidebar);
+  color: var(--fg);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.shortcut-plus,
+.shortcut-or {
+  color: var(--fg-muted);
+  font-size: 11px;
+}
+
+.shortcut-or {
+  padding: 0 2px;
+}
+
 /*
  * Preview colours shared by the custom themes (Gruvbox Material Dark Hard and
  * Tokyo Night Moon): headings in the Title colour. Each theme's colours are in

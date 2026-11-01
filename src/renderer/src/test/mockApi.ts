@@ -7,6 +7,7 @@ import {
   type ThemeSetting,
   type UiSettings,
 } from '../../../shared/api'
+import type { Platform } from '../../../shared/shortcuts'
 
 function listenerSet<T extends unknown[]>() {
   const listeners = new Set<(...args: T) => void>()
@@ -32,6 +33,7 @@ export function installMockApi() {
 
   const api = {
     initialTheme: 'system' as ThemeSetting,
+    platform: 'linux' as Platform,
     pickFolder: vi.fn<ClarityApi['pickFolder']>().mockResolvedValue(null),
     enterFolder: vi.fn<ClarityApi['enterFolder']>().mockResolvedValue(null),
     openFile: vi.fn<ClarityApi['openFile']>().mockResolvedValue(null),

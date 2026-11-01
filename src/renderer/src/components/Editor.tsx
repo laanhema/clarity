@@ -1,11 +1,12 @@
-import { defaultKeymap, history, historyKeymap, indentWithTab, redo, undo } from '@codemirror/commands'
+import { history, redo, undo } from '@codemirror/commands'
 import { indentOnInput } from '@codemirror/language'
-import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from '@codemirror/search'
+import { highlightSelectionMatches, openSearchPanel, search } from '@codemirror/search'
 import { EditorState, Transaction, type Extension } from '@codemirror/state'
 import { drawSelection, dropCursor, EditorView, highlightActiveLine, keymap, placeholder } from '@codemirror/view'
 import { useEffect, useEffectEvent, useImperativeHandle, useRef, type Ref } from 'react'
 import { editorLineAt, editorOffsetOf, type PaneChange, type SyncPane } from '../scrollSync/panes'
 import { trackScrolling } from '../scrollbars'
+import { editorKeymap } from './editorKeymap'
 import { markdownExtensions } from './editorMarkdown'
 
 export interface EditorHandle {
@@ -102,7 +103,7 @@ function createState(doc: string, { onDocChanged, onPaneChange }: StateCallbacks
     EditorState.tabSize.of(4),
     placeholder('Start writing Markdown…'),
     EditorView.contentAttributes.of({ 'aria-label': 'Markdown source', spellcheck: 'false' }),
-    keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
+    keymap.of(editorKeymap),
     editorTheme,
     EditorView.updateListener.of((update) => {
       if (update.docChanged) onDocChanged(update.state.doc.toString())

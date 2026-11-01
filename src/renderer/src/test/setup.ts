@@ -25,6 +25,24 @@ if (!('ResizeObserver' in globalThis)) {
   }
 }
 
+// Nor modal dialogs: open and close them without the top layer.
+if (!('showModal' in HTMLDialogElement.prototype)) {
+  Object.defineProperties(HTMLDialogElement.prototype, {
+    showModal: {
+      value(this: HTMLDialogElement) {
+        this.setAttribute('open', '')
+      },
+    },
+    close: {
+      value(this: HTMLDialogElement) {
+        if (!this.hasAttribute('open')) return
+        this.removeAttribute('open')
+        this.dispatchEvent(new Event('close'))
+      },
+    },
+  })
+}
+
 afterEach(() => {
   cleanup()
 })

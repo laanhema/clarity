@@ -717,3 +717,28 @@ describe('font and font size', () => {
     }
   })
 })
+
+describe('Keyboard Shortcuts panel', () => {
+  it('opens from the Help menu and gives focus back to the editor when it closes', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    act(() => editorView().focus())
+    expect(editorRoot().activeElement).toBe(editor())
+
+    mock.sendMenuCommand('show-shortcuts')
+    const dialog = screen.getByRole('dialog', { name: 'Keyboard shortcuts' })
+    expect(within(dialog).getByText('Open folder')).toBeInTheDocument()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(editorRoot().activeElement).toBe(editor())
+  })
+
+  it('closes again when the menu item is chosen while it is open', () => {
+    render(<App />)
+    mock.sendMenuCommand('show-shortcuts')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    mock.sendMenuCommand('show-shortcuts')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+})

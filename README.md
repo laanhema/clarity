@@ -21,6 +21,8 @@ Open a folder, pick a Markdown file from the sidebar, and edit it with a live pr
 
 ## Keyboard shortcuts
 
+**Help → Keyboard Shortcuts** (Ctrl+/) opens a panel that lists every shortcut, with the keys of your platform. Esc, the close button or a click outside closes it. The panel and the menu read the same list, `src/shared/shortcuts.ts`.
+
 On macOS use Cmd instead of Ctrl.
 
 | Action                     | Shortcut                      |
@@ -30,7 +32,7 @@ On macOS use Cmd instead of Ctrl.
 | Open Folder                | Ctrl+Shift+O                  |
 | Save                       | Ctrl+S                        |
 | Save As                    | Ctrl+Shift+S                  |
-| Undo / Redo                | Ctrl+Z / Ctrl+Shift+Z (or Ctrl+Y in the editor) |
+| Undo / Redo                | Ctrl+Z / Ctrl+Shift+Z (or Ctrl+Y in the editor, except on macOS) |
 | Find and replace           | Ctrl+F (Esc closes the panel) |
 | Next / previous match      | F3 / Shift+F3, or Ctrl+G / Ctrl+Shift+G |
 | Select next occurrence     | Ctrl+D                        |
@@ -40,11 +42,13 @@ On macOS use Cmd instead of Ctrl.
 | Editor and preview         | Ctrl+2                        |
 | Preview only               | Ctrl+3                        |
 | Indent / outdent selection | Tab / Shift+Tab (Esc, then Tab, moves focus out of the editor) |
-| Zoom in / out / reset      | Ctrl+= / Ctrl+- / Ctrl+0      |
-| Full screen                | F11                           |
+| Zoom in / out / reset      | Ctrl+Plus (the =/+ key) / Ctrl+- / Ctrl+0 |
+| Full screen                | F11 (Ctrl+Cmd+F on macOS)     |
+| Minimize / close window    | Ctrl+M / Ctrl+W               |
 | Quit (Linux and macOS)     | Ctrl+Q                        |
+| Keyboard shortcuts         | Ctrl+/                        |
 
-The bars between the panes can also be moved with the Left and Right arrow keys once focused.
+Cut, copy, paste and select all use the usual Ctrl+X, Ctrl+C, Ctrl+V and Ctrl+A. The bars between the panes can also be moved with the Left and Right arrow keys once focused.
 
 ## Settings
 

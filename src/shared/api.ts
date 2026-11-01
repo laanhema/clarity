@@ -20,7 +20,18 @@ export interface OpenedFile {
   content: string
 }
 
-export type MenuCommand = 'new-file' | 'open-file' | 'open-folder' | 'save' | 'save-as' | 'undo' | 'redo' | 'find'
+import type { Platform } from './shortcuts'
+
+export type MenuCommand =
+  | 'new-file'
+  | 'open-file'
+  | 'open-folder'
+  | 'save'
+  | 'save-as'
+  | 'undo'
+  | 'redo'
+  | 'find'
+  | 'show-shortcuts'
 
 export const MENU_COMMANDS = [
   'new-file',
@@ -31,6 +42,7 @@ export const MENU_COMMANDS = [
   'undo',
   'redo',
   'find',
+  'show-shortcuts',
 ] as const satisfies readonly MenuCommand[]
 
 export type UnsavedChoice = 'save' | 'discard' | 'cancel'
@@ -94,6 +106,8 @@ export const FONT_SIZE_RANGE = { min: 10, max: 28 } as const
 export interface ClarityApi {
   /** The theme setting when the window opened, available before `getSettings` resolves. */
   readonly initialTheme: ThemeSetting
+  /** The operating system, so the renderer can label keys (Ctrl or ⌘). */
+  readonly platform: Platform
   /**
    * Shows the native folder picker and resolves to the real path of the chosen
    * folder, or null when cancelled. The folder opens only once `enterFolder` is called.

@@ -10,6 +10,7 @@ import {
   type ThemeSetting,
   type UiSettings,
 } from '../shared/api'
+import { platformOf } from '../shared/shortcuts'
 
 function isMenuCommand(value: unknown): value is MenuCommand {
   return typeof value === 'string' && (MENU_COMMANDS as readonly string[]).includes(value)
@@ -34,6 +35,7 @@ function initialTheme(): ThemeSetting {
 
 const api: ClarityApi = {
   initialTheme: initialTheme(),
+  platform: platformOf(process.platform),
   pickFolder: () => invoke(IpcChannel.PickFolder),
   enterFolder: (rootPath) => invoke(IpcChannel.EnterFolder, rootPath),
   openFile: () => invoke(IpcChannel.OpenFile),

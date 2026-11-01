@@ -10,6 +10,7 @@ import {
 } from '../../shared/api'
 import { Editor, type EditorHandle } from './components/Editor'
 import { Preview, type PreviewHandle } from './components/Preview'
+import { ShortcutsPanel } from './components/ShortcutsPanel'
 import { Sidebar } from './components/Sidebar'
 import { Splitter } from './components/Splitter'
 import { StatusBar } from './components/StatusBar'
@@ -61,6 +62,7 @@ export function App() {
   const [folder, setFolder] = useState<OpenedFolder | null>(null)
   const [doc, setDoc] = useState<DocumentState>(NEW_DOCUMENT)
   const [message, setMessage] = useState<string | null>(null)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settings, setSettings] = useState<UiSettings>(() => ({ ...DEFAULT_UI_SETTINGS, theme: api.initialTheme }))
   // Native dialogs are modal, but async work around them is not: run one flow at a time.
   const busy = useRef(false)
@@ -317,6 +319,8 @@ export function App() {
         return runHistory(command)
       case 'find':
         return find()
+      case 'show-shortcuts':
+        return setShortcutsOpen((open) => !open)
     }
   })
 
@@ -413,6 +417,7 @@ export function App() {
         theme={settings.theme}
         onCycleTheme={() => updateSettings({ theme: NEXT_THEME[settings.theme] })}
       />
+      {shortcutsOpen && <ShortcutsPanel platform={api.platform} onClose={() => setShortcutsOpen(false)} />}
     </div>
   )
 }
