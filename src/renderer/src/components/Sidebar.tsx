@@ -121,7 +121,7 @@ export function Sidebar({ folder, activePath, dirty, onSelectFile, onOpenFolder 
           {folder ? fileName(folder.rootPath) : 'No folder open'}
         </span>
         <button type="button" className="sidebar-open" onClick={onOpenFolder}>
-          Open Folder…
+          Open Folder
         </button>
       </header>
       {folder && folder.tree.length === 0 && <p className="sidebar-empty">No Markdown files in this folder.</p>}

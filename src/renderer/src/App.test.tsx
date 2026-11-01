@@ -58,7 +58,7 @@ function typeInEditor(text: string): void {
 async function openFirstFileAndEdit() {
   const user = userEvent.setup()
   render(<App />)
-  await user.click(screen.getByRole('button', { name: 'Open Folder…' }))
+  await user.click(screen.getByRole('button', { name: 'Open Folder' }))
   await user.click(await screen.findByRole('button', { name: 'first.md' }))
   await waitFor(() => expect(editorText()).toBe('# First'))
   typeInEditor(' edited')
@@ -95,7 +95,7 @@ describe('unsaved changes', () => {
   it('switches files without asking when there are no changes', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: 'Open Folder…' }))
+    await user.click(screen.getByRole('button', { name: 'Open Folder' }))
     await user.click(await screen.findByRole('button', { name: 'first.md' }))
     await waitFor(() => expect(editorText()).toBe('# First'))
     await user.click(screen.getByRole('button', { name: 'second.md' }))
@@ -281,7 +281,7 @@ describe('preview', () => {
     files['/notes/first.md'] = 'See [the second](second.md) and [outside](../x.md).'
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: 'Open Folder…' }))
+    await user.click(screen.getByRole('button', { name: 'Open Folder' }))
     await user.click(await screen.findByRole('button', { name: 'first.md' }))
     await user.click(await within(preview()).findByText('outside'))
     expect(mock.api.readFile).not.toHaveBeenCalledWith('/x.md')
@@ -295,7 +295,7 @@ describe('preview', () => {
     mock.api.loadImage.mockResolvedValue('data:image/png;base64,AAAA')
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: 'Open Folder…' }))
+    await user.click(screen.getByRole('button', { name: 'Open Folder' }))
     await user.click(await screen.findByRole('button', { name: 'first.md' }))
     expect(await within(preview()).findByRole('img', { name: 'local' })).toHaveAttribute(
       'src',
@@ -456,7 +456,7 @@ describe('changes made by other programs', () => {
   async function openFirstFile() {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: 'Open Folder…' }))
+    await user.click(screen.getByRole('button', { name: 'Open Folder' }))
     await user.click(await screen.findByRole('button', { name: 'first.md' }))
     await waitFor(() => expect(editorText()).toBe('# First'))
     expect(mock.api.watchDocument).toHaveBeenLastCalledWith('/notes/first.md')

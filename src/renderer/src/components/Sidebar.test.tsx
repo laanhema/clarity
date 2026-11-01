@@ -28,7 +28,7 @@ describe('Sidebar', () => {
   it('invites opening a folder when none is open', async () => {
     const { onOpenFolder } = renderSidebar({ folder: null })
     expect(screen.getByText('No folder open')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Open Folder…' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Open Folder' }))
     expect(onOpenFolder).toHaveBeenCalledOnce()
   })
 
