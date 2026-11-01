@@ -160,7 +160,7 @@ export function buildMenu(options: MenuOptions): Menu {
       ...(isDev
         ? ([{ role: 'reload' }, { role: 'toggleDevTools' }, { type: 'separator' }] satisfies MenuItemConstructorOptions[])
         : []),
-      { role: 'resetZoom' },
+      { role: 'resetZoom', label: 'Reset Zoom Level' },
       { role: 'zoomIn' },
       { role: 'zoomOut' },
       { type: 'separator' },

@@ -42,7 +42,7 @@ On macOS use Cmd instead of Ctrl.
 | Editor and preview         | Ctrl+2                        |
 | Preview only               | Ctrl+3                        |
 | Indent / outdent selection | Tab / Shift+Tab (Esc, then Tab, moves focus out of the editor) |
-| Zoom in / out / reset      | Ctrl+Plus (the =/+ key) / Ctrl+- / Ctrl+0 |
+| Zoom in / out / reset zoom level | Ctrl+Plus (the =/+ key) / Ctrl+- / Ctrl+0 |
 | Full screen                | F11 (Ctrl+Cmd+F on macOS)     |
 | Minimize / close window    | Ctrl+M / Ctrl+W               |
 | Quit (Linux and macOS)     | Ctrl+Q                        |

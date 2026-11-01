@@ -138,7 +138,7 @@ export const SHORTCUTS = [
   {
     id: 'zoom-reset',
     group: 'View',
-    label: 'Actual size',
+    label: 'Reset zoom level',
     keys: ['CmdOrCtrl+0'],
     source: { kind: 'role', role: 'resetZoom' },
   },
