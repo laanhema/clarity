@@ -81,6 +81,7 @@
   color-scheme: dark;
   --bg: #1d2021;
   --bg-sidebar: #141617;
+  --bg-stripe: var(--bg-sidebar);
   --bg-hover: #282828;
   --bg-active: color-mix(in srgb, #e78a4e 24%, transparent);
   --fg: #d4be98;
@@ -126,6 +127,7 @@
   color-scheme: dark;
   --bg: #222436;
   --bg-sidebar: #1e2030;
+  --bg-stripe: var(--bg-sidebar);
   --bg-hover: #2f334d;
   --bg-active: color-mix(in srgb, #82aaff 24%, transparent);
   --fg: #c8d3f5;

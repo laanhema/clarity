@@ -418,6 +418,15 @@ describe('selecting text in the editor', () => {
     expect(selected()).toBe('# ')
   })
 
+  // Custom dark themes render inside the OS dark media query, so they must
+  // override every Dark variable or inherit GitHub's colours.
+  it('gives each custom dark theme its own table stripe', () => {
+    for (const theme of ['gruvbox-material-dark-hard', 'tokyo-night-moon']) {
+      const block = new RegExp(`:root\\[data-theme='${theme}'\\] \\{([^}]*)\\}`).exec(styles)?.[1] ?? ''
+      expect(block, theme).toContain('--bg-stripe: var(--bg-sidebar);')
+    }
+  })
+
   // CodeMirror draws the selection behind the text, so an opaque active line
   // would hide a selection made within the line the cursor is on.
   it('keeps the active line translucent in every theme', () => {
