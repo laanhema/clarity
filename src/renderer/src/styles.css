@@ -4,6 +4,8 @@
   --bg-sidebar: #f5f6f8;
   --bg-hover: rgba(0, 0, 0, 0.05);
   --bg-active: rgba(46, 107, 230, 0.12);
+  /* Sidebar row hover: the selected file's colour in Light, the grey hover in the dark themes. */
+  --bg-row-hover: var(--bg-active);
   --fg: #1f2328;
   --fg-muted: #656d76;
   --border: #d8dce1;
@@ -51,6 +53,7 @@
     --bg-stripe: #151b23;
     --bg-hover: rgba(101, 108, 118, 0.2);
     --bg-active: var(--bg-hover);
+    --bg-row-hover: var(--bg-hover);
     --fg: #f0f6fc;
     --fg-muted: #9198a1;
     --border: #3d444d;
@@ -423,7 +426,7 @@ samp {
 }
 
 .tree-row:hover {
-  background: var(--bg-hover);
+  background: var(--bg-row-hover);
 }
 
 .tree-row:focus-visible {
