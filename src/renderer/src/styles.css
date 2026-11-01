@@ -218,6 +218,7 @@ button {
 
 .sidebar > .tree,
 .preview-pane,
+.shortcuts-body,
 .markdown-body pre,
 .markdown-body table,
 .markdown-body .katex-display,
@@ -231,6 +232,7 @@ button {
 :where(
     .sidebar > .tree,
     .preview-pane,
+    .shortcuts-body,
     .markdown-body pre,
     .markdown-body table,
     .markdown-body .katex-display,
@@ -243,6 +245,7 @@ button {
 :is(
     .sidebar > .tree,
     .preview-pane,
+    .shortcuts-body,
     .markdown-body pre,
     .markdown-body table,
     .markdown-body .katex-display,
@@ -904,10 +907,11 @@ samp {
 /* Keyboard Shortcuts panel (Help → Keyboard Shortcuts) */
 
 .shortcuts {
-  width: min(720px, calc(100vw - 48px));
+  width: min(760px, calc(100vw - 48px));
   max-width: none;
   max-height: none;
   padding: 0;
+  overflow: hidden;
   border: 1px solid var(--rule, var(--border));
   border-radius: 10px;
   background: var(--bg);
@@ -922,7 +926,7 @@ samp {
 .shortcuts-content {
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 64px);
+  max-height: calc(100vh - 80px);
 }
 
 .shortcuts-header {
@@ -962,15 +966,18 @@ samp {
 
 .shortcuts-body {
   overflow: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 32px;
   padding: 4px 20px 18px;
-  columns: 2 300px;
-  column-gap: 32px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb-visible) transparent;
+}
+
+.shortcuts-column {
+  flex: 1 1 300px;
+  min-width: 0;
 }
 
 .shortcut-group {
-  break-inside: avoid;
   padding-top: 14px;
 }
 
@@ -992,7 +999,7 @@ samp {
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  padding: 4px 0;
+  padding: 3px 0;
 }
 
 .shortcut-row + .shortcut-row {

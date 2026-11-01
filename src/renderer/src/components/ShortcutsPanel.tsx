@@ -1,17 +1,23 @@
 import { Fragment, useEffect, useId, useRef } from 'react'
 import {
   keyCaps,
-  SHORTCUT_GROUPS,
   SHORTCUTS,
   shortcutKeys,
   type Platform,
   type Shortcut,
+  type ShortcutGroup,
 } from '../../../shared/shortcuts'
 
 export interface ShortcutsPanelProps {
   platform: Platform
   onClose: () => void
 }
+
+/** Two columns of about the same length; on a narrow window the second goes under the first. */
+const COLUMNS: readonly (readonly ShortcutGroup[])[] = [
+  ['File', 'Edit', 'Window', 'Help'],
+  ['Editor', 'View'],
+]
 
 /** The focused element, looking inside shadow roots (the editor lives in one). */
 function deepActiveElement(): Element | null {
@@ -77,12 +83,10 @@ export function ShortcutsPanel({ platform, onClose }: ShortcutsPanelProps) {
     }
   }, [])
 
-  const groups = SHORTCUT_GROUPS.map((group) => ({
-    group,
-    rows: SHORTCUTS.filter((shortcut) => shortcut.group === group)
+  const rowsOf = (group: ShortcutGroup) =>
+    SHORTCUTS.filter((shortcut) => shortcut.group === group)
       .map((shortcut) => ({ shortcut, keys: shortcutKeys(shortcut, platform) }))
-      .filter(({ keys }) => keys.length > 0),
-  })).filter(({ rows }) => rows.length > 0)
+      .filter(({ keys }) => keys.length > 0)
 
   return (
     <dialog
@@ -107,15 +111,23 @@ export function ShortcutsPanel({ platform, onClose }: ShortcutsPanelProps) {
           </button>
         </header>
         <div className="shortcuts-body">
-          {groups.map(({ group, rows }) => (
-            <section key={group} className="shortcut-group" aria-labelledby={`${titleId}-${group}`}>
-              <h3 id={`${titleId}-${group}`}>{group}</h3>
-              <dl>
-                {rows.map(({ shortcut, keys }) => (
-                  <Row key={shortcut.id} shortcut={shortcut} keys={keys} platform={platform} />
-                ))}
-              </dl>
-            </section>
+          {COLUMNS.map((column) => (
+            <div key={column.join()} className="shortcuts-column">
+              {column.map((group) => {
+                const rows = rowsOf(group)
+                if (rows.length === 0) return null
+                return (
+                  <section key={group} className="shortcut-group" aria-labelledby={`${titleId}-${group}`}>
+                    <h3 id={`${titleId}-${group}`}>{group}</h3>
+                    <dl>
+                      {rows.map(({ shortcut, keys }) => (
+                        <Row key={shortcut.id} shortcut={shortcut} keys={keys} platform={platform} />
+                      ))}
+                    </dl>
+                  </section>
+                )
+              })}
+            </div>
           ))}
         </div>
       </div>

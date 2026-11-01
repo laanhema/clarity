@@ -1,10 +1,16 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { keyCaps, SHORTCUTS, shortcutKeys } from '../../../shared/shortcuts'
+import { keyCaps, SHORTCUT_GROUPS, SHORTCUTS, shortcutKeys } from '../../../shared/shortcuts'
 import { ShortcutsPanel } from './ShortcutsPanel'
 
 describe('ShortcutsPanel', () => {
+  it('places every shortcut group in a column', () => {
+    render(<ShortcutsPanel platform="linux" onClose={vi.fn()} />)
+    const headings = screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent).sort()
+    expect(headings).toEqual([...SHORTCUT_GROUPS].sort())
+  })
+
   it('lists every shared shortcut, grouped', () => {
     render(<ShortcutsPanel platform="linux" onClose={vi.fn()} />)
     const dialog = screen.getByRole('dialog', { name: 'Keyboard shortcuts' })
