@@ -7,7 +7,6 @@ import {
   THEME_SETTINGS,
   type LanternApi,
   type MenuCommand,
-  type OpenedFolder,
   type ThemeSetting,
   type UiSettings,
 } from '../shared/api'
@@ -35,7 +34,8 @@ function initialTheme(): ThemeSetting {
 
 const api: LanternApi = {
   initialTheme: initialTheme(),
-  openFolder: () => invoke(IpcChannel.OpenFolder),
+  pickFolder: () => invoke(IpcChannel.PickFolder),
+  enterFolder: (rootPath) => invoke(IpcChannel.EnterFolder, rootPath),
   openFile: () => invoke(IpcChannel.OpenFile),
   listMarkdownFiles: () => invoke(IpcChannel.ListMarkdownFiles),
   readFile: (path) => invoke(IpcChannel.ReadFile, path),
@@ -57,7 +57,10 @@ const api: LanternApi = {
   onCloseRequested: (listener) => subscribe(IpcChannel.CloseRequested, () => listener()),
   onSettingsChanged: (listener) =>
     subscribe(IpcChannel.SettingsChanged, (_event, settings) => listener(settings as UiSettings)),
-  onFolderOpened: (listener) => subscribe(IpcChannel.FolderOpened, (_event, folder) => listener(folder as OpenedFolder)),
+  onFolderPicked: (listener) =>
+    subscribe(IpcChannel.FolderPicked, (_event, rootPath) => {
+      if (typeof rootPath === 'string') listener(rootPath)
+    }),
   onDocumentChanged: (listener) =>
     subscribe(IpcChannel.DocumentChanged, (_event, path) => {
       if (typeof path === 'string') listener(path)

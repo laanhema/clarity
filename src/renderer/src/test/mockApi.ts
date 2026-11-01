@@ -4,7 +4,6 @@ import {
   DEFAULT_UI_SETTINGS,
   type LanternApi,
   type MenuCommand,
-  type OpenedFolder,
   type ThemeSetting,
   type UiSettings,
 } from '../../../shared/api'
@@ -27,13 +26,14 @@ export function installMockApi() {
   const menu = listenerSet<[MenuCommand]>()
   const close = listenerSet<[]>()
   const settings = listenerSet<[UiSettings]>()
-  const folderOpened = listenerSet<[OpenedFolder]>()
+  const folderPicked = listenerSet<[string]>()
   const documentChanged = listenerSet<[string]>()
   const treeChanged = listenerSet<[]>()
 
   const api = {
     initialTheme: 'system' as ThemeSetting,
-    openFolder: vi.fn<LanternApi['openFolder']>().mockResolvedValue(null),
+    pickFolder: vi.fn<LanternApi['pickFolder']>().mockResolvedValue(null),
+    enterFolder: vi.fn<LanternApi['enterFolder']>().mockResolvedValue(null),
     openFile: vi.fn<LanternApi['openFile']>().mockResolvedValue(null),
     listMarkdownFiles: vi.fn<LanternApi['listMarkdownFiles']>().mockResolvedValue([]),
     readFile: vi.fn<LanternApi['readFile']>().mockResolvedValue(''),
@@ -51,7 +51,7 @@ export function installMockApi() {
     onMenuCommand: vi.fn<LanternApi['onMenuCommand']>(menu.subscribe),
     onCloseRequested: vi.fn<LanternApi['onCloseRequested']>(close.subscribe),
     onSettingsChanged: vi.fn<LanternApi['onSettingsChanged']>(settings.subscribe),
-    onFolderOpened: vi.fn<LanternApi['onFolderOpened']>(folderOpened.subscribe),
+    onFolderPicked: vi.fn<LanternApi['onFolderPicked']>(folderPicked.subscribe),
     onDocumentChanged: vi.fn<LanternApi['onDocumentChanged']>(documentChanged.subscribe),
     onTreeChanged: vi.fn<LanternApi['onTreeChanged']>(treeChanged.subscribe),
   } satisfies LanternApi
@@ -66,8 +66,8 @@ export function installMockApi() {
     requestClose: () => close.emit(),
     /** Simulates a settings change made from the menu. */
     changeSettings: (next: UiSettings) => settings.emit(next),
-    /** Simulates Open Recent. */
-    openFolderFromMenu: (folder: OpenedFolder) => folderOpened.emit(folder),
+    /** Simulates picking a folder from Open Recent. */
+    pickFolderFromMenu: (rootPath: string) => folderPicked.emit(rootPath),
     /** Simulates another program changing the watched document. */
     changeDocumentOnDisk: (path: string) => documentChanged.emit(path),
     /** Simulates files being added or removed in the open folder. */

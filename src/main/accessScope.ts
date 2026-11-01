@@ -6,19 +6,51 @@ import { PathAccessError, isMarkdownPath, resolveInsideRoot } from './pathGuard'
 /**
  * The set of paths the renderer may read and write.
  *
- * Access is granted only through native dialogs: the folder chosen with Open
- * Folder, and single files chosen with Open File or Save As. Every renderer
+ * Access is granted only through native dialogs and the menu: the folder
+ * chosen with Open Folder or Open Recent, and single files chosen with Open
+ * File or Save As. Opening another folder drops the old folder's grant. Every renderer
  * request is resolved against these grants; anything else is rejected.
  */
 export class AccessScope {
   #folder: string | null = null
+  #pickedFolder: string | null = null
   readonly #files = new Set<string>()
 
   get folder(): string | null {
     return this.#folder
   }
 
-  /** Grants access to a folder the user picked. Returns its real path. */
+  /**
+   * Remembers a folder the user picked, without granting it yet: the renderer
+   * first settles the open document, then grants it with `grantPickedFolder`.
+   * Returns its real path.
+   */
+  async pickFolder(folderPath: string): Promise<string> {
+    const real = await realpath(folderPath)
+    if (!(await stat(real)).isDirectory()) throw new PathAccessError('Not a folder', folderPath)
+    this.#pickedFolder = real
+    return real
+  }
+
+  /**
+   * Makes the picked folder, or the open folder again, the granted folder, and
+   * forgets the pick. Any other path throws `PathAccessError`.
+   */
+  async grantPickedFolder(requested: unknown): Promise<string> {
+    const picked = this.#pickedFolder
+    this.#pickedFolder = null
+    if (typeof requested !== 'string' || (requested !== picked && requested !== this.#folder)) {
+      throw new PathAccessError('Folder was not picked', String(requested))
+    }
+    return this.grantFolder(requested)
+  }
+
+  /** Forgets a picked folder, such as when the user cancels the switch. */
+  dropPickedFolder(): void {
+    this.#pickedFolder = null
+  }
+
+  /** Grants access to a folder. Returns its real path. */
   async grantFolder(folderPath: string): Promise<string> {
     const real = await realpath(folderPath)
     if (!(await stat(real)).isDirectory()) throw new PathAccessError('Not a folder', folderPath)
@@ -32,15 +64,6 @@ export class AccessScope {
     if (!(await stat(real)).isFile()) throw new PathAccessError('Not a file', filePath)
     this.#files.add(real)
     return real
-  }
-
-  /**
-   * Keeps access to a file after the folder changes, such as the document that
-   * is open while the user opens another folder. Only pass a real path that
-   * this scope already resolved.
-   */
-  keepFile(realPath: string): void {
-    this.#files.add(realPath)
   }
 
   /**

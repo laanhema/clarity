@@ -104,7 +104,7 @@ There is no Docker setup and no CI workflow. electron-builder reads the `build` 
 The threat is a malicious Markdown file: one that tries to run script, read files outside the folder, phone home through an image URL, or restyle the app to trick the user. The defenses are layered so no single bug opens the disk.
 
 - The renderer runs sandboxed with context isolation and no Node.js. Its only route to the disk is the preload API.
-- The main process accepts paths only inside the grants made through native dialogs or Open Recent, and resolves real paths so symlinks and `../` cannot escape. Opening another folder drops the old grant except for the open document.
+- The main process accepts paths only inside the grants made through native dialogs or Open Recent, and resolves real paths so symlinks and `../` cannot escape. Opening another folder closes the open document and drops the old folder's grant.
 - rehype-sanitize applies GitHub's schema, drops `<style>`, and prefixes ids with `user-content-` so a document cannot clobber the app's own elements. KaTeX runs with `trust` off.
 - Mermaid runs with `securityLevel: 'strict'`. Lantern then removes scripts, event handlers, animations and non-`#` URLs from the SVG and shows it in a shadow root.
 - The production CSP allows scripts, styles and fonts only from the app and images only from the app or `data:`. The dev server adds inline scripts and a localhost websocket for hot reload, nothing more.

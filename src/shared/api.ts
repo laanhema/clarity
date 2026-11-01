@@ -94,8 +94,16 @@ export const FONT_SIZE_RANGE = { min: 10, max: 28 } as const
 export interface LanternApi {
   /** The theme setting when the window opened, available before `getSettings` resolves. */
   readonly initialTheme: ThemeSetting
-  /** Shows the native folder picker. Resolves to null when cancelled. */
-  openFolder(): Promise<OpenedFolder | null>
+  /**
+   * Shows the native folder picker and resolves to the real path of the chosen
+   * folder, or null when cancelled. The folder opens only once `enterFolder` is called.
+   */
+  pickFolder(): Promise<string | null>
+  /**
+   * Opens the folder that `pickFolder` or Open Recent picked last, or the open
+   * folder again, and drops the old folder's access. Null forgets the pick and resolves to null.
+   */
+  enterFolder(rootPath: string | null): Promise<OpenedFolder | null>
   /** Shows the native file picker and reads the chosen file. Resolves to null when cancelled. */
   openFile(): Promise<OpenedFile | null>
   /** Lists the Markdown files of the open folder again. */
@@ -129,8 +137,8 @@ export interface LanternApi {
   onCloseRequested(listener: () => void): () => void
   /** Subscribes to settings changes, including those made from the menu. */
   onSettingsChanged(listener: (settings: UiSettings) => void): () => void
-  /** Subscribes to folders opened from the Open Recent menu. */
-  onFolderOpened(listener: (folder: OpenedFolder) => void): () => void
+  /** Subscribes to folders picked from the Open Recent menu; the listener answers with `enterFolder`. */
+  onFolderPicked(listener: (rootPath: string) => void): () => void
   /** Subscribes to changes of the watched document made by other programs. */
   onDocumentChanged(listener: (path: string) => void): () => void
   /** Subscribes to Markdown files being added to or removed from the open folder. */
@@ -138,7 +146,8 @@ export interface LanternApi {
 }
 
 export const IpcChannel = {
-  OpenFolder: 'lantern:open-folder',
+  PickFolder: 'lantern:pick-folder',
+  EnterFolder: 'lantern:enter-folder',
   OpenFile: 'lantern:open-file',
   ListMarkdownFiles: 'lantern:list-markdown-files',
   ReadFile: 'lantern:read-file',
@@ -156,7 +165,7 @@ export const IpcChannel = {
   MenuCommand: 'lantern:menu-command',
   CloseRequested: 'lantern:close-requested',
   SettingsChanged: 'lantern:settings-changed',
-  FolderOpened: 'lantern:folder-opened',
+  FolderPicked: 'lantern:folder-picked',
   DocumentChanged: 'lantern:document-changed',
   TreeChanged: 'lantern:tree-changed',
 } as const

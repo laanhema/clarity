@@ -55,15 +55,55 @@ describe('AccessScope', () => {
     await expect(scope.grantFile(folder)).rejects.toBeInstanceOf(PathAccessError)
   })
 
-  it('keeps the open document writable after another folder is opened', async () => {
+  it('drops the old folder, including its open document, when another folder is granted', async () => {
     const other = path.join(workspace, 'other')
     await writeAt(other, 'b.md', 'b')
     await scope.grantFolder(folder)
     const open = await scope.resolveForWrite(path.join(folder, 'a.md'))
-    scope.keepFile(open)
-    await scope.grantFolder(other)
-    await expect(scope.resolveForWrite(open)).resolves.toBe(open)
-    await expect(scope.resolveForRead(path.join(folder, 'script.js'))).rejects.toBeInstanceOf(PathAccessError)
+    await scope.grantPickedFolder(await scope.pickFolder(other))
+    await expect(scope.resolveForRead(open)).rejects.toBeInstanceOf(PathAccessError)
+    await expect(scope.resolveForWrite(open)).rejects.toBeInstanceOf(PathAccessError)
+    await expect(scope.resolveForRead(path.join(other, 'b.md'))).resolves.toBe(path.join(other, 'b.md'))
+  })
+
+  describe('picked folders', () => {
+    let other: string
+
+    beforeEach(async () => {
+      other = path.join(workspace, 'other')
+      await writeAt(other, 'b.md', 'b')
+    })
+
+    it('grants nothing until the picked folder is entered', async () => {
+      await scope.grantFolder(folder)
+      const picked = await scope.pickFolder(other)
+      expect(picked).toBe(other)
+      expect(scope.folder).toBe(folder)
+      await expect(scope.resolveForRead(path.join(other, 'b.md'))).rejects.toBeInstanceOf(PathAccessError)
+      await expect(scope.grantPickedFolder(picked)).resolves.toBe(other)
+      expect(scope.folder).toBe(other)
+    })
+
+    it('grants only the picked folder or the open one, and only once', async () => {
+      await expect(scope.grantPickedFolder(folder)).rejects.toBeInstanceOf(PathAccessError)
+      await scope.pickFolder(other)
+      await expect(scope.grantPickedFolder(folder)).rejects.toBeInstanceOf(PathAccessError)
+      await expect(scope.grantPickedFolder(other)).rejects.toBeInstanceOf(PathAccessError)
+      await scope.grantPickedFolder(await scope.pickFolder(other))
+      await expect(scope.grantPickedFolder(other)).resolves.toBe(other)
+    })
+
+    it('keeps the open folder when a pick is dropped', async () => {
+      await scope.grantFolder(folder)
+      await scope.pickFolder(other)
+      scope.dropPickedFolder()
+      await expect(scope.grantPickedFolder(other)).rejects.toBeInstanceOf(PathAccessError)
+      expect(scope.folder).toBe(folder)
+    })
+
+    it('refuses to pick a file', async () => {
+      await expect(scope.pickFolder(path.join(folder, 'a.md'))).rejects.toBeInstanceOf(PathAccessError)
+    })
   })
 
   describe('resolveImage', () => {

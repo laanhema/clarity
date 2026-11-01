@@ -186,10 +186,31 @@ export function App() {
     })
   }
 
+  /**
+   * Opens a folder that the main process picked. Another folder closes the
+   * open document, after settling its unsaved changes; the same folder again
+   * only refreshes the sidebar.
+   */
+  async function enterFolder(rootPath: string): Promise<void> {
+    const switching = rootPath !== folder?.rootPath
+    let settled = false
+    try {
+      settled = !switching || (await settleUnsavedChanges(doc))
+    } finally {
+      // Cancelled or failed: keep the old folder and let the main process forget the pick.
+      if (!settled) await api.enterFolder(null)
+    }
+    if (!settled) return
+    const opened = await api.enterFolder(rootPath)
+    if (!opened) return
+    setFolder(opened)
+    if (switching) setDoc(loadedDocument(null, ''))
+  }
+
   function openFolderDialog(): Promise<void> {
     return exclusive(async () => {
-      const opened = await api.openFolder()
-      if (opened) setFolder(opened)
+      const rootPath = await api.pickFolder()
+      if (rootPath) await enterFolder(rootPath)
     })
   }
 
@@ -305,12 +326,13 @@ export function App() {
     })
   })
 
+  const onFolderPicked = useEffectEvent((rootPath: string) => void exclusive(() => enterFolder(rootPath)))
   const onDocumentChanged = useEffectEvent((path: string) => void checkExternalChange(path))
   const onTreeChanged = useEffectEvent(() => void refreshTree().catch(() => undefined))
 
   useEffect(() => api.onMenuCommand((command) => onMenuCommand(command)), [api])
   useEffect(() => api.onCloseRequested(() => onCloseRequested()), [api])
-  useEffect(() => api.onFolderOpened((opened) => setFolder(opened)), [api])
+  useEffect(() => api.onFolderPicked((rootPath) => onFolderPicked(rootPath)), [api])
   useEffect(() => api.onDocumentChanged((path) => onDocumentChanged(path)), [api])
   useEffect(() => api.onTreeChanged(() => onTreeChanged()), [api])
 

@@ -15,6 +15,13 @@ const folder: OpenedFolder = {
   ],
 }
 
+const otherFolder: OpenedFolder = {
+  rootPath: '/other',
+  tree: [{ kind: 'file', name: 'third.md', path: '/other/third.md' }],
+}
+
+const folders: Record<string, OpenedFolder> = { '/notes': folder, '/other': otherFolder }
+
 const files: Record<string, string> = {
   '/notes/first.md': '# First',
   '/notes/second.md': '# Second',
@@ -24,7 +31,8 @@ let mock: ReturnType<typeof installMockApi>
 
 beforeEach(() => {
   mock = installMockApi()
-  mock.api.openFolder.mockResolvedValue(folder)
+  mock.api.pickFolder.mockResolvedValue('/notes')
+  mock.api.enterFolder.mockImplementation((rootPath) => Promise.resolve(rootPath ? (folders[rootPath] ?? null) : null))
   mock.api.listMarkdownFiles.mockResolvedValue(folder.tree)
   mock.api.readFile.mockImplementation((path) => Promise.resolve(files[path] ?? ''))
 })
@@ -519,11 +527,72 @@ describe('changes made by other programs', () => {
     expect(await screen.findByRole('button', { name: 'third.md' })).toBeInTheDocument()
   })
 
-  it('shows a folder opened from Open Recent', () => {
+  it('shows a folder opened from Open Recent', async () => {
     render(<App />)
-    mock.openFolderFromMenu({ rootPath: '/recent', tree: [{ kind: 'file', name: 'r.md', path: '/recent/r.md' }] })
-    expect(screen.getByText('recent')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'r.md' })).toBeInTheDocument()
+    mock.pickFolderFromMenu('/other')
+    expect(await screen.findByRole('button', { name: 'third.md' })).toBeInTheDocument()
+    expect(screen.getByText('other')).toBeInTheDocument()
+    expect(mock.api.enterFolder).toHaveBeenCalledWith('/other')
+  })
+})
+
+describe('switching folders', () => {
+  async function openFirstFile() {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Open Folder' }))
+    await user.click(await screen.findByRole('button', { name: 'first.md' }))
+    await waitFor(() => expect(editorText()).toBe('# First'))
+    return user
+  }
+
+  it('closes a clean document when another folder opens', async () => {
+    const user = await openFirstFile()
+    mock.api.pickFolder.mockResolvedValue('/other')
+    await user.click(screen.getByRole('button', { name: 'Open Folder' }))
+    expect(await screen.findByRole('button', { name: 'third.md' })).toBeInTheDocument()
+    await waitFor(() => expect(editorText()).toBe(''))
+    expect(screen.getByText('Untitled')).toBeInTheDocument()
+    expect(mock.api.confirmUnsaved).not.toHaveBeenCalled()
+    expect(mock.api.watchDocument).toHaveBeenLastCalledWith(null)
+  })
+
+  it('closes the document when another folder opens from Open Recent', async () => {
+    await openFirstFile()
+    mock.pickFolderFromMenu('/other')
+    expect(await screen.findByRole('button', { name: 'third.md' })).toBeInTheDocument()
+    await waitFor(() => expect(editorText()).toBe(''))
+  })
+
+  it('keeps the document open when the same folder opens again', async () => {
+    const user = await openFirstFile()
+    await user.click(screen.getByRole('button', { name: 'Open Folder' }))
+    await waitFor(() => expect(mock.api.enterFolder).toHaveBeenCalledTimes(2))
+    expect(editorText()).toBe('# First')
+    expect(screen.getByRole('button', { name: 'first.md' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('asks about unsaved changes and keeps folder and document when cancelled', async () => {
+    const user = await openFirstFileAndEdit()
+    mock.api.pickFolder.mockResolvedValue('/other')
+    await user.click(screen.getByRole('button', { name: 'Open Folder' }))
+    await waitFor(() => expect(mock.api.enterFolder).toHaveBeenLastCalledWith(null))
+    expect(mock.api.confirmUnsaved).toHaveBeenCalledWith('first.md')
+    expect(mock.api.enterFolder).not.toHaveBeenCalledWith('/other')
+    expect(screen.getByRole('button', { name: /first\.md/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'third.md' })).not.toBeInTheDocument()
+    expect(editorText()).toBe('# First edited')
+    expect(screen.getByText('Unsaved')).toBeInTheDocument()
+  })
+
+  it('saves unsaved changes first when the user chooses Save', async () => {
+    const user = await openFirstFileAndEdit()
+    mock.api.confirmUnsaved.mockResolvedValue('save')
+    mock.api.pickFolder.mockResolvedValue('/other')
+    await user.click(screen.getByRole('button', { name: 'Open Folder' }))
+    expect(await screen.findByRole('button', { name: 'third.md' })).toBeInTheDocument()
+    expect(mock.api.writeFile).toHaveBeenCalledWith('/notes/first.md', '# First edited')
+    await waitFor(() => expect(editorText()).toBe(''))
   })
 })
 

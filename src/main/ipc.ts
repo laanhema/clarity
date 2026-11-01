@@ -55,24 +55,27 @@ function send(state: WindowState, channel: string, ...args: unknown[]): void {
 }
 
 /**
- * Makes `folder` the window's open folder: grants access, watches it for
- * added and removed files, and records it in Open Recent. The open document
- * stays writable even when it lies outside the new folder.
+ * Makes the folder the user picked the window's open folder: grants access,
+ * watches it for added and removed files, and records it in Open Recent. The
+ * old folder's grant goes with it.
  */
-export async function useFolder(state: WindowState, folder: string, settings: SettingsStore): Promise<OpenedFolder> {
-  if (state.documentPath) state.scope.keepFile(state.documentPath)
-  const rootPath = await state.scope.grantFolder(folder)
+async function enterFolder(state: WindowState, requested: unknown, settings: SettingsStore): Promise<OpenedFolder | null> {
+  if (requested === null) {
+    state.scope.dropPickedFolder()
+    return null
+  }
+  const rootPath = await state.scope.grantPickedFolder(requested)
   state.stopFolderWatch?.()
   state.stopFolderWatch = watchFolderTree(rootPath, () => send(state, IpcChannel.TreeChanged))
   settings.update((current) => ({ ...current, recentFolders: addRecentFolder(current.recentFolders, rootPath) }))
   return { rootPath, tree: await listMarkdownTree(rootPath) }
 }
 
-/** Opens a folder from the Open Recent menu and hands it to the renderer. */
+/** Picks a folder from the Open Recent menu and hands it to the renderer, which settles the document and enters it. */
 export async function openRecentFolder(state: WindowState, folder: string, settings: SettingsStore): Promise<void> {
-  let opened: OpenedFolder
+  let rootPath: string
   try {
-    opened = await useFolder(state, folder, settings)
+    rootPath = await state.scope.pickFolder(folder)
   } catch {
     settings.update((current) => ({
       ...current,
@@ -85,17 +88,17 @@ export async function openRecentFolder(state: WindowState, folder: string, setti
     })
     return
   }
-  send(state, IpcChannel.FolderOpened, opened)
+  send(state, IpcChannel.FolderPicked, rootPath)
 }
 
-async function openFolder(state: WindowState, settings: SettingsStore): Promise<OpenedFolder | null> {
+async function pickFolder(state: WindowState): Promise<string | null> {
   const result = await dialog.showOpenDialog(state.window, {
     title: 'Open Folder',
     properties: ['openDirectory', 'createDirectory'],
   })
   const chosen = result.filePaths[0]
   if (result.canceled || !chosen) return null
-  return useFolder(state, chosen, settings)
+  return state.scope.pickFolder(chosen)
 }
 
 async function openFile(state: WindowState): Promise<OpenedFile | null> {
@@ -203,7 +206,11 @@ async function loadImage(state: WindowState, documentPath: unknown, src: unknown
 }
 
 export function registerIpcHandlers(settings: SettingsStore): void {
-  ipcMain.handle(IpcChannel.OpenFolder, (event) => openFolder(senderState(event), settings))
+  ipcMain.handle(IpcChannel.PickFolder, (event) => pickFolder(senderState(event)))
+
+  ipcMain.handle(IpcChannel.EnterFolder, (event, rootPath: unknown) =>
+    enterFolder(senderState(event), rootPath, settings),
+  )
 
   ipcMain.handle(IpcChannel.OpenFile, (event) => openFile(senderState(event)))
 
