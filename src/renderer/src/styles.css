@@ -668,6 +668,19 @@ samp {
   overflow-x: auto;
 }
 
+/*
+ * Mermaid measures each diagram in this element (mermaid.ts). Fixed, so it
+ * never makes the page taller than the window and adds a second scrollbar.
+ */
+.mermaid-measure {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .markdown-body .mermaid-pending {
   color: var(--fg-muted);
 }

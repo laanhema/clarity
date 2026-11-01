@@ -273,6 +273,9 @@ export function applyInlineStyles(root: ParentNode): void {
  */
 const RENDER_ID = 'clarity-mermaid'
 
+/** The off-page element each diagram is measured in; styles.css keeps it out of the page's layout. */
+export const MEASURE_CLASS = 'mermaid-measure'
+
 /** Mermaid's CSS by palette, font, diagram type and `%%{init}%%` config, from the last render of that kind. */
 const cssByKind = new Map<string, string>()
 
@@ -290,14 +293,18 @@ async function renderOnce(mermaid: Mermaid, source: string, css: string | undefi
     sheet.replaceSync(css)
     document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
   }
+  // Mermaid draws into this element to measure the diagram. Left to itself it
+  // appends one to <body> below the app, which makes the whole page scroll.
+  const container = document.createElement('div')
+  container.className = MEASURE_CLASS
+  document.body.append(container)
   try {
-    const { svg } = await mermaid.render(RENDER_ID, source)
+    const { svg } = await mermaid.render(RENDER_ID, source, container)
     return parseMermaidSvg(svg)
   } finally {
     if (sheet) document.adoptedStyleSheets = document.adoptedStyleSheets.filter((adopted) => adopted !== sheet)
     // Mermaid can leave its measuring element behind when a diagram fails.
-    document.getElementById(`d${RENDER_ID}`)?.remove()
-    document.getElementById(RENDER_ID)?.remove()
+    container.remove()
   }
 }
 

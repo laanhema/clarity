@@ -1,10 +1,12 @@
 import mermaid from 'mermaid'
 import { describe, expect, it, vi } from 'vitest'
 import { THEME_SETTINGS } from '../../../shared/api'
+import styles from '../styles.css?raw'
 import {
   applyInlineStyles,
   diagramStyle,
   FONT_STACKS,
+  MEASURE_CLASS,
   mermaidConfig,
   PALETTES,
   parseFontSetting,
@@ -142,6 +144,38 @@ describe('renderMermaid', () => {
     const { css } = await renderMermaid('graph TD; A-->B', 'tokyo-night-moon', 'commit-mono')
     expect(css).toBe('svg{fill:red}')
     expect(mermaid.initialize).toHaveBeenLastCalledWith(mermaidConfig('tokyo-night-moon', 'commit-mono'))
+    vi.unstubAllGlobals()
+  })
+
+  it('measures each diagram in a fixed element, so the page never grows a second scrollbar', async () => {
+    vi.stubGlobal(
+      'CSSStyleSheet',
+      class {
+        replaceSync = vi.fn()
+      },
+    )
+    Object.defineProperty(document, 'adoptedStyleSheets', { value: [], writable: true, configurable: true })
+    const stylesheet = document.createElement('style')
+    stylesheet.textContent = styles
+    document.head.append(stylesheet)
+    const containers: { parent: Node | null; position: string; visibility: string }[] = []
+    vi.mocked(mermaid.render).mockImplementation((_id, _text, container) => {
+      if (container) {
+        const style = getComputedStyle(container)
+        containers.push({ parent: container.parentNode, position: style.position, visibility: style.visibility })
+      }
+      return Promise.resolve({ svg: '<svg><style>svg{fill:red}</style></svg>', diagramType: 'flowchart-v2' })
+    })
+
+    await renderMermaid('graph TD; A-->B', 'dark', 'jetbrains-mono-nl')
+
+    // Mermaid would otherwise append its measuring element to <body>, below the full-height app.
+    expect(containers.length).toBeGreaterThan(0)
+    for (const container of containers) {
+      expect(container).toEqual({ parent: document.body, position: 'fixed', visibility: 'hidden' })
+    }
+    expect(document.querySelector(`.${MEASURE_CLASS}`)).toBeNull()
+    stylesheet.remove()
     vi.unstubAllGlobals()
   })
 })
