@@ -48,6 +48,8 @@ const editorTheme = EditorView.theme({
     '--scrollbar-thumb': 'var(--scrollbar-thumb-visible)',
     transitionDuration: 'var(--scrollbar-fade-in)',
   },
+  // Keeps the fading, inherited scrollbar-color from restyling every line on each frame.
+  '.cm-scroller > *': { scrollbarColor: 'transparent transparent' },
   '.cm-content': { padding: 'var(--editor-pad-y) 0', caretColor: 'var(--fg)' },
   // In editor-only view the pane sets --editor-column, and the side padding
   // grows so the text fills a centred column of that width, where the preview

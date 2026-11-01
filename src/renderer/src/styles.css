@@ -199,6 +199,9 @@ button {
  * bar keeps its space while hidden, so nothing shifts when it appears. The
  * thumb colour is a registered property so it can transition; it does not
  * inherit, so hovering a pane does not show the bars of the code blocks in it.
+ * scrollbar-color itself does inherit, though, so each fading element's
+ * children set their own: otherwise every frame of a fade restyles everything
+ * inside the element, which stalls scrolling in a long folder tree or document.
  * The editor, in its shadow root, has the same rules in Editor.tsx.
  */
 @property --scrollbar-thumb {
@@ -216,13 +219,35 @@ button {
 .sidebar > .tree,
 .preview-pane,
 .markdown-body pre,
-.markdown-body table {
+.markdown-body table,
+.markdown-body .katex-display,
+.markdown-body .mermaid-diagram {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
   transition: --scrollbar-thumb var(--scrollbar-fade-out) ease-out;
 }
 
-:is(.sidebar > .tree, .preview-pane, .markdown-body pre, .markdown-body table):is(:hover, .scrolling) {
+/* Zero specificity, so a fading element that is a child of another keeps its own rule. */
+:where(
+    .sidebar > .tree,
+    .preview-pane,
+    .markdown-body pre,
+    .markdown-body table,
+    .markdown-body .katex-display,
+    .markdown-body .mermaid-diagram
+  )
+  > * {
+  scrollbar-color: transparent transparent;
+}
+
+:is(
+    .sidebar > .tree,
+    .preview-pane,
+    .markdown-body pre,
+    .markdown-body table,
+    .markdown-body .katex-display,
+    .markdown-body .mermaid-diagram
+  ):is(:hover, .scrolling) {
   --scrollbar-thumb: var(--scrollbar-thumb-visible);
   transition-duration: var(--scrollbar-fade-in);
 }
@@ -353,6 +378,17 @@ samp {
   flex: 1;
   overflow: auto;
   padding: 4px 0 12px;
+  /*
+   * The sidebar's colour again: Chromium scrolls a box off the main thread only
+   * when it has an opaque background. Without one, every scroll frame repaints
+   * the page, and a busy main thread freezes the tree until it jumps ahead.
+   */
+  background-color: var(--bg);
+}
+
+/* Lets a scrollbar fade repaint the tree from its cached rows. */
+.sidebar > .tree > li {
+  isolation: isolate;
 }
 
 .tree {

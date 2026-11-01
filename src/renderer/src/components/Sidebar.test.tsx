@@ -1,7 +1,9 @@
 import { render, screen, within } from '@testing-library/react'
+import { Profiler } from 'react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { OpenedFolder } from '../../../shared/api'
+import { SCROLLING_CLASS, trackScrolling } from '../scrollbars'
 import { Sidebar, type SidebarProps } from './Sidebar'
 
 const folder: OpenedFolder = {
@@ -98,5 +100,29 @@ describe('Sidebar', () => {
   it('shows no unsaved dot when the document is clean', () => {
     renderSidebar({ activePath: '/notes/todo.md', dirty: false })
     expect(screen.queryByRole('img', { name: 'Unsaved changes' })).not.toBeInTheDocument()
+  })
+
+  it('only toggles a class on the tree while it scrolls, without rendering again', () => {
+    const stop = trackScrolling(document, 1000)
+    const onRender = vi.fn()
+    render(
+      <Profiler id="sidebar" onRender={onRender}>
+        <Sidebar folder={folder} activePath={null} dirty={false} onSelectFile={vi.fn()} onOpenFolder={vi.fn()} />
+      </Profiler>,
+    )
+    const tree = screen.getByRole('navigation', { name: 'Files' }).querySelector(':scope > .tree')
+    if (!tree) throw new Error('Missing tree')
+    const renders = onRender.mock.calls.length
+    const changes = new MutationObserver(() => undefined)
+    changes.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true })
+
+    for (let i = 0; i < 20; i++) tree.dispatchEvent(new Event('scroll'))
+
+    const records = changes.takeRecords()
+    changes.disconnect()
+    expect(records.map((record) => [record.target, record.type, record.attributeName])).toEqual([[tree, 'attributes', 'class']])
+    expect(tree).toHaveClass(SCROLLING_CLASS)
+    expect(onRender).toHaveBeenCalledTimes(renders)
+    stop()
   })
 })

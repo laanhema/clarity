@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SCROLLING_CLASS, trackScrolling } from './scrollbars'
+import styles from './styles.css?raw'
 
 describe('trackScrolling', () => {
   beforeEach(() => {
@@ -67,5 +68,62 @@ describe('trackScrolling', () => {
     expect(element.classList.contains(SCROLLING_CLASS)).toBe(false)
     element.dispatchEvent(new Event('scroll'))
     expect(element.classList.contains(SCROLLING_CLASS)).toBe(false)
+  })
+})
+
+describe('scrollbar styles', () => {
+  let stylesheet: HTMLStyleElement
+
+  beforeEach(() => {
+    stylesheet = document.createElement('style')
+    stylesheet.textContent = styles
+    document.head.append(stylesheet)
+    document.body.innerHTML = `
+      <nav class="sidebar"><ul class="tree"><li><button class="tree-row">guides</button>
+        <ul class="tree"><li><button class="tree-row">setup.md</button></li></ul></li></ul></nav>
+      <section class="pane preview-pane"><article class="markdown-body">
+        <pre><code><span>code</span></code></pre>
+        <table><tbody><tr><td>cell</td></tr></tbody></table>
+        <p><span class="katex-display"><span class="katex">x</span></span></p>
+        <div class="mermaid-diagram"><div>diagram</div></div>
+      </article></section>`
+  })
+
+  afterEach(() => {
+    stylesheet.remove()
+    document.body.replaceChildren()
+  })
+
+  const get = (selector: string) => {
+    const element = document.querySelector<HTMLElement>(selector)
+    if (!element) throw new Error(`Missing ${selector}`)
+    return element
+  }
+  const scrollbarColor = (element: Element) => getComputedStyle(element).getPropertyValue('scrollbar-color')
+
+  // The fade changes the scroller's scrollbar-color on every frame. If its
+  // contents inherited it, each frame would restyle all of them.
+  it.each([
+    ['.sidebar > .tree', '.sidebar > .tree > li', '.tree .tree .tree-row'],
+    ['.preview-pane', '.markdown-body', '.markdown-body td'],
+    ['.markdown-body pre', '.markdown-body pre > code', '.markdown-body pre span'],
+    ['.markdown-body table', '.markdown-body tbody', '.markdown-body td'],
+    ['.markdown-body .katex-display', '.markdown-body .katex', '.markdown-body .katex'],
+    ['.markdown-body .mermaid-diagram', '.mermaid-diagram > div', '.mermaid-diagram > div'],
+  ])('keeps the scrollbar fade of %s from reaching its contents', (scrollerSelector, childSelector, deepSelector) => {
+    const scroller = get(scrollerSelector)
+    const contents = [get(childSelector), get(deepSelector)]
+    const before = contents.map(scrollbarColor)
+    const scrollerBefore = scrollbarColor(scroller)
+
+    scroller.style.setProperty('scrollbar-color', 'red blue')
+
+    expect(scrollbarColor(scroller)).not.toBe(scrollerBefore)
+    expect(contents.map(scrollbarColor)).toEqual(before)
+  })
+
+  it('gives the folder tree an opaque background, so Chromium scrolls it off the main thread', () => {
+    // The sidebar's own colour, opaque in every theme.
+    expect(getComputedStyle(get('.sidebar > .tree')).backgroundColor).toBe('var(--bg)')
   })
 })

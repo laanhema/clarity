@@ -19,7 +19,8 @@ export function trackScrolling(root: Document | ShadowRoot, idleMs = SCROLLBAR_I
     if (!(target instanceof Element)) return
     const pending = timers.get(target)
     if (pending !== undefined) clearTimeout(pending)
-    target.classList.add(SCROLLING_CLASS)
+    // Scroll events come every frame; touch the DOM only when a burst starts.
+    else target.classList.add(SCROLLING_CLASS)
     timers.set(
       target,
       setTimeout(() => {
