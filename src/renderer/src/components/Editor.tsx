@@ -5,6 +5,7 @@ import { EditorState, Transaction, type Extension } from '@codemirror/state'
 import { drawSelection, dropCursor, EditorView, highlightActiveLine, keymap, placeholder } from '@codemirror/view'
 import { useEffect, useEffectEvent, useImperativeHandle, useRef, type Ref } from 'react'
 import { editorLineAt, editorOffsetOf, type PaneChange, type SyncPane } from '../scrollSync/panes'
+import { trackScrolling } from '../scrollbars'
 import { markdownExtensions } from './editorMarkdown'
 
 export interface EditorHandle {
@@ -32,7 +33,19 @@ export interface EditorProps {
 const editorTheme = EditorView.theme({
   '&': { flex: '1', minHeight: '0', backgroundColor: 'var(--bg)', color: 'var(--fg)' },
   '&.cm-focused': { outline: 'none' },
-  '.cm-scroller': { fontFamily: 'var(--font-app)', fontSize: 'var(--editor-size)', lineHeight: 'var(--editor-lh)' },
+  '.cm-scroller': {
+    fontFamily: 'var(--font-app)',
+    fontSize: 'var(--editor-size)',
+    lineHeight: 'var(--editor-lh)',
+    // Fades like the other scrollbars; see "Scrollbars" in styles.css.
+    scrollbarWidth: 'thin',
+    scrollbarColor: 'var(--scrollbar-thumb) transparent',
+    transition: '--scrollbar-thumb var(--scrollbar-fade-out) ease-out',
+  },
+  '.cm-scroller:hover, .cm-scroller.scrolling': {
+    '--scrollbar-thumb': 'var(--scrollbar-thumb-visible)',
+    transitionDuration: 'var(--scrollbar-fade-in)',
+  },
   '.cm-content': { padding: 'var(--editor-pad-y) 0', caretColor: 'var(--fg)' },
   '.cm-line': { padding: '0 var(--editor-pad-x)' },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--fg)' },
@@ -132,7 +145,9 @@ export function Editor({ value, documentKey, onChange, hidden = false, ref }: Ed
       }),
     })
     viewRef.current = view
+    const stopTracking = trackScrolling(root)
     return () => {
+      stopTracking()
       view.destroy()
       viewRef.current = null
     }

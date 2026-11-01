@@ -191,6 +191,47 @@ button {
   color: inherit;
 }
 
+/*
+ * Scrollbars stay hidden until their area is hovered or scrolled (scrollbars.ts
+ * adds .scrolling for a second after each scroll), then fade out again. The
+ * bar keeps its space while hidden, so nothing shifts when it appears. The
+ * thumb colour is a registered property so it can transition; it does not
+ * inherit, so hovering a pane does not show the bars of the code blocks in it.
+ * The editor, in its shadow root, has the same rules in Editor.tsx.
+ */
+@property --scrollbar-thumb {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
+:root {
+  --scrollbar-thumb-visible: color-mix(in srgb, var(--fg-muted) 45%, transparent);
+  --scrollbar-fade-in: 150ms;
+  --scrollbar-fade-out: 400ms;
+}
+
+.sidebar > .tree,
+.preview-pane,
+.markdown-body pre,
+.markdown-body table {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  transition: --scrollbar-thumb var(--scrollbar-fade-out) ease-out;
+}
+
+:is(.sidebar > .tree, .preview-pane, .markdown-body pre, .markdown-body table):is(:hover, .scrolling) {
+  --scrollbar-thumb: var(--scrollbar-thumb-visible);
+  transition-duration: var(--scrollbar-fade-in);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --scrollbar-fade-in: 0s;
+    --scrollbar-fade-out: 0s;
+  }
+}
+
 /* The browser gives these its own monospace; Clarity uses the app font everywhere. */
 pre,
 code,
