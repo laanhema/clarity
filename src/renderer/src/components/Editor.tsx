@@ -8,6 +8,7 @@ import { editorLineAt, editorOffsetOf, type PaneChange, type SyncPane } from '..
 import { trackScrolling } from '../scrollbars'
 import { editorKeymap } from './editorKeymap'
 import { markdownExtensions } from './editorMarkdown'
+import { rowSelection } from './editorSelection'
 
 export interface EditorHandle {
   focus(): void
@@ -54,13 +55,16 @@ const editorTheme = EditorView.theme({
   '.cm-content': { padding: 'var(--editor-pad-y) 0', caretColor: 'var(--fg)' },
   // In editor-only view the pane sets --editor-column, and the side padding
   // grows so the text fills a centred column of that width, where the preview
-  // puts its text. The lines stay full width, so the active line, selections
-  // and clicks in the margins still reach across the pane.
-  '.cm-line': { padding: '0 max(var(--editor-pad-x), (100% - var(--editor-column, 100%)) / 2)' },
+  // puts its text. The lines stay full width, so clicks in the margins still
+  // place the cursor. The padding is rounded to whole pixels because
+  // CodeMirror reads it with parseInt to find where selections start and end.
+  '.cm-line': { padding: '0 round(max(var(--editor-pad-x), (100% - var(--editor-column, 100%)) / 2), 1px)' },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--fg)' },
-  '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, ::selection':
+  '&.cm-focused > .cm-scroller > .cm-rowSelectionLayer .cm-selectionBackground, .cm-selectionBackground, ::selection':
     { backgroundColor: 'var(--editor-selection)' },
-  '.cm-activeLine': { backgroundColor: 'var(--editor-active-line)' },
+  // Painted only behind the text, not the padding, so it spans the same
+  // column as a selection does.
+  '.cm-activeLine': { backgroundColor: 'var(--editor-active-line)', backgroundClip: 'content-box' },
   '.cm-selectionMatch': { backgroundColor: 'var(--editor-match)' },
   '.cm-searchMatch': { backgroundColor: 'var(--editor-match)', outline: '1px solid var(--border)' },
   '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'var(--editor-match-selected)' },
@@ -93,6 +97,7 @@ function createState(doc: string, { onDocChanged, onPaneChange }: StateCallbacks
   const extensions: Extension[] = [
     history(),
     drawSelection(),
+    rowSelection,
     dropCursor(),
     indentOnInput(),
     highlightActiveLine(),

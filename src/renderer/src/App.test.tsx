@@ -462,6 +462,17 @@ describe('selecting text in the editor', () => {
       expect(opacity, colour).toBeLessThan(0.6)
     }
   })
+
+  // CodeMirror leaves the line padding out of a selection, so an active line
+  // painted into that padding stuck out past the selection on both sides.
+  it('paints the active line and the selection over the same column', async () => {
+    await openFirstFileAndEdit()
+    const root = editorRoot()
+    const css = [...root.querySelectorAll('style')].map((style) => style.textContent).join('\n')
+    expect(css).toMatch(/\.cm-activeLine \{[^}]*background-clip: content-box/)
+    expect(css).toMatch(/\.cm-selectionLayer \{[^}]*display: none/)
+    expect(root.querySelector('.cm-rowSelectionLayer')).not.toBeNull()
+  })
 })
 
 describe('new documents', () => {
