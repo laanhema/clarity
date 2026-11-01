@@ -50,7 +50,7 @@
     --bg-sidebar: #010409;
     --bg-stripe: #151b23;
     --bg-hover: rgba(101, 108, 118, 0.2);
-    --bg-active: rgba(56, 139, 253, 0.1);
+    --bg-active: var(--bg-hover);
     --fg: #f0f6fc;
     --fg-muted: #9198a1;
     --border: #3d444d;
