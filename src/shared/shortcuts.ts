@@ -61,6 +61,7 @@ export const SHORTCUTS = [
   { id: 'new-file', group: 'File', label: 'New document', keys: ['CmdOrCtrl+N'], source: MENU },
   { id: 'open-file', group: 'File', label: 'Open file', keys: ['CmdOrCtrl+O'], source: MENU },
   { id: 'open-folder', group: 'File', label: 'Open folder', keys: ['CmdOrCtrl+Shift+O'], source: MENU },
+  { id: 'close-folder', group: 'File', label: 'Close folder', keys: ['CmdOrCtrl+Alt+W'], source: MENU },
   { id: 'save', group: 'File', label: 'Save', keys: ['CmdOrCtrl+S'], source: MENU },
   { id: 'save-as', group: 'File', label: 'Save as', keys: ['CmdOrCtrl+Shift+S'], source: MENU },
   // Electron's quit role has no accelerator on Windows.

@@ -66,6 +66,16 @@ describe('AccessScope', () => {
     await expect(scope.resolveForRead(path.join(other, 'b.md'))).resolves.toBe(path.join(other, 'b.md'))
   })
 
+  it('revokes folder access when dropped', async () => {
+    await scope.grantFolder(folder)
+    expect(scope.folder).toBe(folder)
+    await expect(scope.resolveForRead(path.join(folder, 'a.md'))).resolves.toBe(path.join(folder, 'a.md'))
+
+    scope.dropFolder()
+    expect(scope.folder).toBeNull()
+    await expect(scope.resolveForRead(path.join(folder, 'a.md'))).rejects.toBeInstanceOf(PathAccessError)
+  })
+
   describe('picked folders', () => {
     let other: string
 

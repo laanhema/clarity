@@ -26,6 +26,7 @@ export type MenuCommand =
   | 'new-file'
   | 'open-file'
   | 'open-folder'
+  | 'close-folder'
   | 'save'
   | 'save-as'
   | 'undo'
@@ -37,6 +38,7 @@ export const MENU_COMMANDS = [
   'new-file',
   'open-file',
   'open-folder',
+  'close-folder',
   'save',
   'save-as',
   'undo',
@@ -118,6 +120,8 @@ export interface ClarityApi {
    * folder again, and drops the old folder's access. Null forgets the pick and resolves to null.
    */
   enterFolder(rootPath: string | null): Promise<OpenedFolder | null>
+  /** Closes the currently open folder, revoking access and stopping watchers. */
+  closeFolder(): Promise<void>
   /** Shows the native file picker and reads the chosen file. Resolves to null when cancelled. */
   openFile(): Promise<OpenedFile | null>
   /** Lists the Markdown files of the open folder again. */
@@ -143,6 +147,8 @@ export interface ClarityApi {
   loadImage(documentPath: string, src: string): Promise<string | null>
   /** The path of the Markdown file requested on launch, if any. */
   getInitialFile(): Promise<string | null>
+  /** The folder restored on launch, if any. */
+  getInitialFolder(): Promise<OpenedFolder | null>
   /** Opens an http or https link in the system browser. Other links are ignored. */
   openExternal(url: string): void
   getSettings(): Promise<UiSettings>
@@ -166,6 +172,7 @@ export interface ClarityApi {
 export const IpcChannel = {
   PickFolder: 'clarity:pick-folder',
   EnterFolder: 'clarity:enter-folder',
+  CloseFolder: 'clarity:close-folder',
   OpenFile: 'clarity:open-file',
   ListMarkdownFiles: 'clarity:list-markdown-files',
   ReadFile: 'clarity:read-file',
@@ -178,6 +185,7 @@ export const IpcChannel = {
   WatchDocument: 'clarity:watch-document',
   LoadImage: 'clarity:load-image',
   GetInitialFile: 'clarity:get-initial-file',
+  GetInitialFolder: 'clarity:get-initial-folder',
   OpenExternal: 'clarity:open-external',
   GetSettings: 'clarity:get-settings',
   UpdateSettings: 'clarity:update-settings',

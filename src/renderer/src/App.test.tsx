@@ -109,6 +109,52 @@ describe('App layout', () => {
     expect(editorText()).toBe('# First edited')
     expect(mock.api.readFile).not.toHaveBeenCalledWith('/notes/second.md')
   })
+
+  it('restores previous folder and open file on startup without file arguments', async () => {
+    mock.api.getInitialFolder.mockResolvedValue(folder)
+    mock.api.getInitialFile.mockResolvedValue('/notes/first.md')
+    render(<App />)
+
+    await waitFor(() => expect(editorText()).toBe('# First'))
+    expect(screen.getByText('notes')).toBeInTheDocument()
+    expect(screen.getByText('/notes/first.md')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'first.md' })).toHaveAttribute('aria-current', 'page')
+    expect(mock.api.watchDocument).not.toHaveBeenCalledWith(null)
+    expect(mock.api.watchDocument).toHaveBeenCalledWith('/notes/first.md')
+  })
+
+  it('starts gracefully with an empty workspace when restored paths are missing', () => {
+    mock.api.getInitialFolder.mockResolvedValue(null)
+    mock.api.getInitialFile.mockResolvedValue(null)
+    render(<App />)
+
+    expect(screen.getByText('No folder open')).toBeInTheDocument()
+    expect(editorText()).toBe('')
+    expect(screen.getByText('Untitled')).toBeInTheDocument()
+  })
+
+  it('closes the folder via the sidebar Close button and clears the open file', async () => {
+    mock.api.getInitialFolder.mockResolvedValue(folder)
+    mock.api.getInitialFile.mockResolvedValue('/notes/first.md')
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => expect(editorText()).toBe('# First'))
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.getByText('No folder open')).toBeInTheDocument())
+    expect(mock.api.closeFolder).toHaveBeenCalledOnce()
+    expect(editorText()).toBe('')
+  })
+
+  it('closes the folder via the Close Folder menu command', async () => {
+    mock.api.getInitialFolder.mockResolvedValue(folder)
+    render(<App />)
+
+    await waitFor(() => expect(screen.getByText('notes')).toBeInTheDocument())
+    mock.sendMenuCommand('close-folder')
+    await waitFor(() => expect(screen.getByText('No folder open')).toBeInTheDocument())
+    expect(mock.api.closeFolder).toHaveBeenCalledOnce()
+  })
 })
 
 describe('unsaved changes', () => {
@@ -202,7 +248,7 @@ describe('saving', () => {
     await waitFor(() => expect(screen.queryByText('Unsaved')).not.toBeInTheDocument())
     expect(mock.api.writeFile).toHaveBeenCalledWith('/notes/first.md', '# First edited')
     expect(screen.queryByRole('img', { name: 'Unsaved changes' })).not.toBeInTheDocument()
-    expect(mock.api.setDocumentDirty).toHaveBeenLastCalledWith(false)
+    await waitFor(() => expect(mock.api.setDocumentDirty).toHaveBeenLastCalledWith(false))
   })
 
   it('uses Save As for a new document and adopts the chosen path', async () => {

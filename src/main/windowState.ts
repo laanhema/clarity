@@ -1,4 +1,5 @@
 import type { BrowserWindow, WebContents } from 'electron'
+import type { OpenedFolder } from '../shared/api'
 import { AccessScope } from './accessScope'
 import type { StopWatching } from './watchers'
 
@@ -7,6 +8,8 @@ export interface WindowState {
   window: BrowserWindow
   scope: AccessScope
   dirty: boolean
+  /** Promise resolving to the folder to open once the window finishes loading. */
+  initialFolder: Promise<OpenedFolder | null> | null
   /** Promise resolving to the real path of a file to open once the window finishes loading. */
   initialFile: Promise<string | null> | null
   /** Set once the renderer has dealt with unsaved changes and asked to close. */
@@ -28,6 +31,7 @@ export function trackWindow(window: BrowserWindow): WindowState {
     window,
     scope: new AccessScope(),
     dirty: false,
+    initialFolder: null,
     initialFile: null,
     closeConfirmed: false,
     quitAfterClose: false,

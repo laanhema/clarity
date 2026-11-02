@@ -21,7 +21,7 @@ const folder: OpenedFolder = {
 }
 
 function renderSidebar(props: Partial<SidebarProps> = {}) {
-  const handlers = { onSelectFile: vi.fn(), onOpenFolder: vi.fn() }
+  const handlers = { onSelectFile: vi.fn(), onOpenFolder: vi.fn(), onCloseFolder: vi.fn() }
   render(<Sidebar folder={folder} activePath={null} dirty={false} {...handlers} {...props} />)
   return handlers
 }
@@ -32,6 +32,19 @@ describe('Sidebar', () => {
     expect(screen.getByText('No folder open')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Open Folder' }))
     expect(onOpenFolder).toHaveBeenCalledOnce()
+  })
+
+  it('renders a Close button when a folder is open and triggers onCloseFolder', async () => {
+    const { onCloseFolder } = renderSidebar()
+    const closeButton = screen.getByRole('button', { name: 'Close' })
+    expect(closeButton).toBeInTheDocument()
+    await userEvent.click(closeButton)
+    expect(onCloseFolder).toHaveBeenCalledOnce()
+  })
+
+  it('does not render a Close button when no folder is open', () => {
+    renderSidebar({ folder: null })
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
   })
 
   it('shows the folder name and its Markdown files', () => {

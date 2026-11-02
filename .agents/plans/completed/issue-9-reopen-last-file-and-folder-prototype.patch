@@ -1,0 +1,571 @@
+diff --git a/src/main/index.ts b/src/main/index.ts
+index 1a3b8cc..90e22c7 100644
+--- a/src/main/index.ts
++++ b/src/main/index.ts
+@@ -1,7 +1,14 @@
+ import { app, BrowserWindow, Menu, nativeTheme, screen } from 'electron'
+ import { join } from 'node:path'
+ import { INITIAL_THEME_SWITCH, IpcChannel, type UiSettings } from '../shared/api'
+-import { grantLaunchFile, openFileFromExternal, openRecentFolder, registerIpcHandlers } from './ipc'
++import {
++  grantLaunchFile,
++  openFileFromExternal,
++  openRecentFolder,
++  registerIpcHandlers,
++  restoreSessionFile,
++  restoreSessionFolder,
++} from './ipc'
+ import { parseLaunchFilePath } from './launchArgs'
+ import { buildMenu } from './menu'
+ import { denyAllPermissions, hardenWebContents } from './security'
+@@ -50,6 +57,9 @@ function createWindow(settings: SettingsStore, initialFile?: string | null): Bro
+ 
+   if (initialFile) {
+     state.initialFile = grantLaunchFile(state, initialFile)
++  } else {
++    state.initialFolder = restoreSessionFolder(state, settings)
++    state.initialFile = restoreSessionFile(state, settings)
+   }
+ 
+   let boundsTimer: ReturnType<typeof setTimeout> | null = null
+diff --git a/src/main/ipc.ts b/src/main/ipc.ts
+index f76f64d..9c2296d 100644
+--- a/src/main/ipc.ts
++++ b/src/main/ipc.ts
+@@ -63,12 +63,19 @@ function send(state: WindowState, channel: string, ...args: unknown[]): void {
+ async function enterFolder(state: WindowState, requested: unknown, settings: SettingsStore): Promise<OpenedFolder | null> {
+   if (requested === null) {
+     state.scope.dropPickedFolder()
++    state.stopFolderWatch?.()
++    state.stopFolderWatch = null
++    settings.update((current) => ({ ...current, lastFolder: null, lastFile: null }))
+     return null
+   }
+   const rootPath = await state.scope.grantPickedFolder(requested)
+   state.stopFolderWatch?.()
+   state.stopFolderWatch = watchFolderTree(rootPath, () => send(state, IpcChannel.TreeChanged))
+-  settings.update((current) => ({ ...current, recentFolders: addRecentFolder(current.recentFolders, rootPath) }))
++  settings.update((current) => ({
++    ...current,
++    recentFolders: addRecentFolder(current.recentFolders, rootPath),
++    lastFolder: rootPath,
++  }))
+   return { rootPath, tree: await listMarkdownTree(rootPath) }
+ }
+ 
+@@ -211,17 +218,60 @@ async function confirmReload(state: WindowState, documentName: string): Promise<
+   return response === 0 ? 'reload' : 'keep'
+ }
+ 
+-async function watchDocument(state: WindowState, requested: unknown): Promise<void> {
++/**
++ * Restores the folder from the previous session, granting access and watching it.
++ * If the folder no longer exists or cannot be accessed, clears the setting and returns null.
++ */
++export async function restoreSessionFolder(
++  state: WindowState,
++  settings: SettingsStore,
++): Promise<OpenedFolder | null> {
++  const folderPath = settings.current.lastFolder
++  if (!folderPath) return null
++  try {
++    const realFolder = await state.scope.grantFolder(folderPath)
++    state.stopFolderWatch?.()
++    state.stopFolderWatch = watchFolderTree(realFolder, () => send(state, IpcChannel.TreeChanged))
++    return { rootPath: realFolder, tree: await listMarkdownTree(realFolder) }
++  } catch {
++    settings.update((current) => ({ ...current, lastFolder: null }))
++    return null
++  }
++}
++
++/**
++ * Restores the Markdown file from the previous session, granting access in AccessScope.
++ * If the file no longer exists or cannot be accessed, clears the setting and returns null.
++ */
++export async function restoreSessionFile(
++  state: WindowState,
++  settings: SettingsStore,
++): Promise<string | null> {
++  const filePath = settings.current.lastFile
++  if (!filePath || !isMarkdownPath(filePath)) return null
++  try {
++    return await state.scope.grantFile(filePath)
++  } catch {
++    settings.update((current) => ({ ...current, lastFile: null }))
++    return null
++  }
++}
++
++async function watchDocument(state: WindowState, requested: unknown, settings: SettingsStore): Promise<void> {
+   const generation = ++state.documentWatchGeneration
+   state.stopDocumentWatch?.()
+   state.stopDocumentWatch = null
+   state.documentPath = null
+-  if (requested === null) return
++  if (requested === null) {
++    settings.update((current) => ({ ...current, lastFile: null }))
++    return
++  }
+ 
+   const reportedPath = requireString(requested, 'path')
+   const realPath = await state.scope.resolveForRead(reportedPath)
+   if (generation !== state.documentWatchGeneration) return
+   state.documentPath = realPath
++  settings.update((current) => ({ ...current, lastFile: realPath }))
+   state.stopDocumentWatch = watchDocumentFile(realPath, () => send(state, IpcChannel.DocumentChanged, reportedPath))
+ }
+ 
+@@ -241,18 +291,21 @@ async function loadImage(state: WindowState, documentPath: unknown, src: unknown
+ export function registerIpcHandlers(settings: SettingsStore): void {
+   ipcMain.handle(IpcChannel.PickFolder, (event) => {
+     const state = senderState(event)
++    state.initialFolder = null
+     state.initialFile = null
+     return pickFolder(state)
+   })
+ 
+   ipcMain.handle(IpcChannel.EnterFolder, (event, rootPath: unknown) => {
+     const state = senderState(event)
++    state.initialFolder = null
+     state.initialFile = null
+     return enterFolder(state, rootPath, settings)
+   })
+ 
+   ipcMain.handle(IpcChannel.OpenFile, (event) => {
+     const state = senderState(event)
++    state.initialFolder = null
+     state.initialFile = null
+     return openFile(state)
+   })
+@@ -264,6 +317,7 @@ export function registerIpcHandlers(settings: SettingsStore): void {
+ 
+   ipcMain.handle(IpcChannel.ReadFile, async (event, requested: unknown) => {
+     const state = senderState(event)
++    state.initialFolder = null
+     state.initialFile = null
+     const filePath = await state.scope.resolveForRead(requested)
+     return readTextFile(filePath)
+@@ -289,16 +343,28 @@ export function registerIpcHandlers(settings: SettingsStore): void {
+     confirmReload(senderState(event), requireString(documentName, 'documentName')),
+   )
+ 
+-  ipcMain.handle(IpcChannel.WatchDocument, (event, requested: unknown) => watchDocument(senderState(event), requested))
++  ipcMain.handle(IpcChannel.WatchDocument, (event, requested: unknown) =>
++    watchDocument(senderState(event), requested, settings),
++  )
+ 
+   ipcMain.handle(IpcChannel.LoadImage, (event, documentPath: unknown, src: unknown) =>
+     loadImage(senderState(event), documentPath, src),
+   )
+ 
++  ipcMain.handle(IpcChannel.GetInitialFolder, async (event): Promise<OpenedFolder | null> => {
++    const state = senderState(event)
++    if (!state.initialFolder) return null
++    const folder = await state.initialFolder
++    state.initialFolder = null
++    return folder
++  })
++
+   ipcMain.handle(IpcChannel.GetInitialFile, async (event): Promise<string | null> => {
+     const state = senderState(event)
+     if (!state.initialFile) return null
+-    return state.initialFile
++    const file = await state.initialFile
++    state.initialFile = null
++    return file
+   })
+ 
+   ipcMain.handle(IpcChannel.GetSettings, (event): UiSettings => {
+diff --git a/src/main/menu.ts b/src/main/menu.ts
+index 1b004ae..98f6a13 100644
+--- a/src/main/menu.ts
++++ b/src/main/menu.ts
+@@ -85,6 +85,7 @@ export function buildMenu(options: MenuOptions): Menu {
+       { label: 'New', accelerator: menuAccelerator('new-file'), click: sendCommand('new-file') },
+       { label: 'Open File…', accelerator: menuAccelerator('open-file'), click: sendCommand('open-file') },
+       { label: 'Open Folder…', accelerator: menuAccelerator('open-folder'), click: sendCommand('open-folder') },
++      { label: 'Close Folder', accelerator: menuAccelerator('close-folder'), click: sendCommand('close-folder') },
+       { label: 'Open Recent', submenu: recentSubmenu(options) },
+       { type: 'separator' },
+       { label: 'Save', accelerator: menuAccelerator('save'), click: sendCommand('save') },
+diff --git a/src/main/settings.test.ts b/src/main/settings.test.ts
+index 36a33df..254cdae 100644
+--- a/src/main/settings.test.ts
++++ b/src/main/settings.test.ts
+@@ -46,7 +46,13 @@ describe('recent folders', () => {
+ describe('parseSettings', () => {
+   it('falls back to defaults for missing, broken or foreign files', () => {
+     for (const raw of ['', 'not json', '[]', 'null', '42']) {
+-      expect(parseSettings(raw)).toEqual({ ui: DEFAULT_UI_SETTINGS, recentFolders: [], window: null })
++      expect(parseSettings(raw)).toEqual({
++        ui: DEFAULT_UI_SETTINGS,
++        recentFolders: [],
++        window: null,
++        lastFolder: null,
++        lastFile: null,
++      })
+     }
+   })
+ 
+@@ -56,11 +62,26 @@ describe('parseSettings', () => {
+         ui: { viewMode: 'preview', theme: 'purple', sidebarWidth: 5000, editorFraction: 'half' },
+         recentFolders: ['/a', 'relative/b', 3, '/a', '/c'],
+         window: { x: 10.4, y: 20, width: 900, height: 700, maximized: true },
++        lastFolder: '/path/to/folder',
++        lastFile: '/path/to/folder/note.md',
+       }),
+     )
+     expect(settings.ui).toEqual({ ...DEFAULT_UI_SETTINGS, viewMode: 'preview', sidebarWidth: 600 })
+     expect(settings.recentFolders).toEqual(['/a', '/c'])
+     expect(settings.window).toEqual({ x: 10, y: 20, width: 900, height: 700, maximized: true })
++    expect(settings.lastFolder).toBe('/path/to/folder')
++    expect(settings.lastFile).toBe('/path/to/folder/note.md')
++  })
++
++  it('drops invalid lastFolder and lastFile paths', () => {
++    const settings = parseSettings(
++      JSON.stringify({
++        lastFolder: 'relative/path',
++        lastFile: 12345,
++      }),
++    )
++    expect(settings.lastFolder).toBeNull()
++    expect(settings.lastFile).toBeNull()
+   })
+ 
+   it('defaults to the Dark theme, and keeps a saved theme', () => {
+@@ -152,6 +173,8 @@ describe('SettingsStore', () => {
+       ui: { ...DEFAULT_UI_SETTINGS, viewMode: 'editor' },
+       recentFolders: ['/notes'],
+       window: { x: 1, y: 2, width: 800, height: 600, maximized: false },
++      lastFolder: null,
++      lastFile: null,
+     })
+     expect(JSON.parse(await readFile(file, 'utf8'))).toEqual(reloaded.current)
+   })
+diff --git a/src/main/settings.ts b/src/main/settings.ts
+index c7e74cc..60de5ba 100644
+--- a/src/main/settings.ts
++++ b/src/main/settings.ts
+@@ -28,11 +28,13 @@ export interface Settings {
+   /** Most recent first. */
+   recentFolders: string[]
+   window: WindowBounds | null
++  lastFolder: string | null
++  lastFile: string | null
+ }
+ 
+ export const MAX_RECENT_FOLDERS = 10
+ export function defaultSettings(): Settings {
+-  return { ui: { ...DEFAULT_UI_SETTINGS }, recentFolders: [], window: null }
++  return { ui: { ...DEFAULT_UI_SETTINGS }, recentFolders: [], window: null, lastFolder: null, lastFile: null }
+ }
+ 
+ function isRecord(value: unknown): value is Record<string, unknown> {
+@@ -85,6 +87,10 @@ function parseWindowBounds(value: unknown): WindowBounds | null {
+   }
+ }
+ 
++function parsePathOrNull(value: unknown): string | null {
++  return typeof value === 'string' && path.isAbsolute(value) ? value : null
++}
++
+ /** Parses a settings file, falling back to defaults for anything missing or invalid. */
+ export function parseSettings(raw: string): Settings {
+   let data: unknown
+@@ -102,6 +108,8 @@ export function parseSettings(raw: string): Settings {
+       .filter((entry, index, all) => all.indexOf(entry) === index)
+       .slice(0, MAX_RECENT_FOLDERS),
+     window: parseWindowBounds(data['window']),
++    lastFolder: parsePathOrNull(data['lastFolder']),
++    lastFile: parsePathOrNull(data['lastFile']),
+   }
+ }
+ 
+diff --git a/src/main/windowState.ts b/src/main/windowState.ts
+index 77418a0..1e3785b 100644
+--- a/src/main/windowState.ts
++++ b/src/main/windowState.ts
+@@ -1,4 +1,5 @@
+ import type { BrowserWindow, WebContents } from 'electron'
++import type { OpenedFolder } from '../shared/api'
+ import { AccessScope } from './accessScope'
+ import type { StopWatching } from './watchers'
+ 
+@@ -7,6 +8,8 @@ export interface WindowState {
+   window: BrowserWindow
+   scope: AccessScope
+   dirty: boolean
++  /** Promise resolving to the folder to open once the window finishes loading. */
++  initialFolder: Promise<OpenedFolder | null> | null
+   /** Promise resolving to the real path of a file to open once the window finishes loading. */
+   initialFile: Promise<string | null> | null
+   /** Set once the renderer has dealt with unsaved changes and asked to close. */
+@@ -28,6 +31,7 @@ export function trackWindow(window: BrowserWindow): WindowState {
+     window,
+     scope: new AccessScope(),
+     dirty: false,
++    initialFolder: null,
+     initialFile: null,
+     closeConfirmed: false,
+     quitAfterClose: false,
+diff --git a/src/preload/index.ts b/src/preload/index.ts
+index 1344b4c..3590263 100644
+--- a/src/preload/index.ts
++++ b/src/preload/index.ts
+@@ -50,6 +50,7 @@ const api: ClarityApi = {
+   watchDocument: (path) => invoke(IpcChannel.WatchDocument, path),
+   loadImage: (documentPath, src) => invoke(IpcChannel.LoadImage, documentPath, src),
+   getInitialFile: () => invoke(IpcChannel.GetInitialFile),
++  getInitialFolder: () => invoke(IpcChannel.GetInitialFolder),
+   openExternal: (url) => ipcRenderer.send(IpcChannel.OpenExternal, url),
+   getSettings: () => invoke(IpcChannel.GetSettings),
+   updateSettings: (patch) => ipcRenderer.send(IpcChannel.UpdateSettings, patch),
+diff --git a/src/renderer/src/App.test.tsx b/src/renderer/src/App.test.tsx
+index 0e1b489..c5ef6b3 100644
+--- a/src/renderer/src/App.test.tsx
++++ b/src/renderer/src/App.test.tsx
+@@ -109,6 +109,50 @@ describe('App layout', () => {
+     expect(editorText()).toBe('# First edited')
+     expect(mock.api.readFile).not.toHaveBeenCalledWith('/notes/second.md')
+   })
++
++  it('restores previous folder and open file on startup without file arguments', async () => {
++    mock.api.getInitialFolder.mockResolvedValue(folder)
++    mock.api.getInitialFile.mockResolvedValue('/notes/first.md')
++    render(<App />)
++
++    await waitFor(() => expect(editorText()).toBe('# First'))
++    expect(screen.getByText('notes')).toBeInTheDocument()
++    expect(screen.getByText('/notes/first.md')).toBeInTheDocument()
++    expect(screen.getByRole('button', { name: 'first.md' })).toHaveAttribute('aria-current', 'page')
++  })
++
++  it('starts gracefully with an empty workspace when restored paths are missing', () => {
++    mock.api.getInitialFolder.mockResolvedValue(null)
++    mock.api.getInitialFile.mockResolvedValue(null)
++    render(<App />)
++
++    expect(screen.getByText('No folder open')).toBeInTheDocument()
++    expect(editorText()).toBe('')
++    expect(screen.getByText('Untitled')).toBeInTheDocument()
++  })
++
++  it('closes the folder via the sidebar Close button and clears the open file', async () => {
++    mock.api.getInitialFolder.mockResolvedValue(folder)
++    mock.api.getInitialFile.mockResolvedValue('/notes/first.md')
++    const user = userEvent.setup()
++    render(<App />)
++
++    await waitFor(() => expect(editorText()).toBe('# First'))
++    await user.click(screen.getByRole('button', { name: 'Close' }))
++    await waitFor(() => expect(screen.getByText('No folder open')).toBeInTheDocument())
++    expect(mock.api.enterFolder).toHaveBeenCalledWith(null)
++    expect(editorText()).toBe('')
++  })
++
++  it('closes the folder via the Close Folder menu command', async () => {
++    mock.api.getInitialFolder.mockResolvedValue(folder)
++    render(<App />)
++
++    await waitFor(() => expect(screen.getByText('notes')).toBeInTheDocument())
++    mock.sendMenuCommand('close-folder')
++    await waitFor(() => expect(screen.getByText('No folder open')).toBeInTheDocument())
++    expect(mock.api.enterFolder).toHaveBeenCalledWith(null)
++  })
+ })
+ 
+ describe('unsaved changes', () => {
+@@ -202,7 +246,7 @@ describe('saving', () => {
+     await waitFor(() => expect(screen.queryByText('Unsaved')).not.toBeInTheDocument())
+     expect(mock.api.writeFile).toHaveBeenCalledWith('/notes/first.md', '# First edited')
+     expect(screen.queryByRole('img', { name: 'Unsaved changes' })).not.toBeInTheDocument()
+-    expect(mock.api.setDocumentDirty).toHaveBeenLastCalledWith(false)
++    await waitFor(() => expect(mock.api.setDocumentDirty).toHaveBeenLastCalledWith(false))
+   })
+ 
+   it('uses Save As for a new document and adopts the chosen path', async () => {
+diff --git a/src/renderer/src/App.tsx b/src/renderer/src/App.tsx
+index cf27cf8..e64cd72 100644
+--- a/src/renderer/src/App.tsx
++++ b/src/renderer/src/App.tsx
+@@ -103,16 +103,21 @@ export function App() {
+     }
+   }, [api])
+ 
++  const restoreFolder = useEffectEvent((initialFolder: OpenedFolder) => setFolder(initialFolder))
+   const openInitialFile = useEffectEvent((path: string) => void openPath(path))
+ 
+   useEffect(() => {
+     let cancelled = false
+-    api.getInitialFile().then(
+-      (path) => {
+-        if (!cancelled && path) openInitialFile(path)
+-      },
+-      () => undefined,
+-    )
++    api
++      .getInitialFolder()
++      .then((initialFolder) => {
++        if (!cancelled && initialFolder) restoreFolder(initialFolder)
++        return api.getInitialFile()
++      })
++      .then((initialFile) => {
++        if (!cancelled && initialFile) openInitialFile(initialFile)
++      })
++      .catch(() => undefined)
+     return () => {
+       cancelled = true
+     }
+@@ -231,6 +236,16 @@ export function App() {
+     })
+   }
+ 
++  function closeFolder(): Promise<void> {
++    return exclusive(async () => {
++      if (!folder) return
++      if (!(await settleUnsavedChanges(doc))) return
++      await api.enterFolder(null)
++      setFolder(null)
++      setDoc(loadedDocument(null, ''))
++    })
++  }
++
+   function newDocument(): Promise<void> {
+     return exclusive(async () => {
+       if (!(await settleUnsavedChanges(doc))) return
+@@ -325,6 +340,8 @@ export function App() {
+         return void openFileDialog()
+       case 'open-folder':
+         return void openFolderDialog()
++      case 'close-folder':
++        return void closeFolder()
+       case 'save':
+         return void exclusive(async () => void (await save(doc)))
+       case 'save-as':
+@@ -384,6 +401,7 @@ export function App() {
+           dirty={dirty}
+           onSelectFile={(path) => void openPath(path)}
+           onOpenFolder={() => void openFolderDialog()}
++          onCloseFolder={() => void closeFolder()}
+         />
+         <Splitter
+           label="Resize sidebar"
+diff --git a/src/renderer/src/components/Sidebar.tsx b/src/renderer/src/components/Sidebar.tsx
+index c7f2d8a..3065389 100644
+--- a/src/renderer/src/components/Sidebar.tsx
++++ b/src/renderer/src/components/Sidebar.tsx
+@@ -8,6 +8,7 @@ export interface SidebarProps {
+   dirty: boolean
+   onSelectFile: (path: string) => void
+   onOpenFolder: () => void
++  onCloseFolder?: () => void
+ }
+ 
+ interface TreeContext {
+@@ -125,13 +126,18 @@ function Tree({ nodes, activePath, dirty, onSelectFile }: TreeContext & { nodes:
+   )
+ }
+ 
+-export function Sidebar({ folder, activePath, dirty, onSelectFile, onOpenFolder }: SidebarProps) {
++export function Sidebar({ folder, activePath, dirty, onSelectFile, onOpenFolder, onCloseFolder }: SidebarProps) {
+   return (
+     <nav className="sidebar" aria-label="Files">
+       <header className="sidebar-header">
+         <span className="sidebar-title" title={folder?.rootPath}>
+           {folder ? fileName(folder.rootPath) : 'No folder open'}
+         </span>
++        {folder && onCloseFolder && (
++          <button type="button" className="sidebar-close" onClick={onCloseFolder} title="Close folder">
++            Close
++          </button>
++        )}
+         <button type="button" className="sidebar-open" onClick={onOpenFolder}>
+           Open Folder
+         </button>
+diff --git a/src/renderer/src/styles.css b/src/renderer/src/styles.css
+index 941365d..1e7a2f2 100644
+--- a/src/renderer/src/styles.css
++++ b/src/renderer/src/styles.css
+@@ -362,7 +362,8 @@ samp {
+   text-transform: uppercase;
+ }
+ 
+-.sidebar-open {
++.sidebar-open,
++.sidebar-close {
+   flex: none;
+   padding: 3px 8px;
+   border: 1px solid var(--border);
+@@ -371,7 +372,8 @@ samp {
+   cursor: pointer;
+ }
+ 
+-.sidebar-open:hover {
++.sidebar-open:hover,
++.sidebar-close:hover {
+   border-color: var(--accent);
+ }
+ 
+diff --git a/src/renderer/src/test/mockApi.ts b/src/renderer/src/test/mockApi.ts
+index 0513f2c..a432046 100644
+--- a/src/renderer/src/test/mockApi.ts
++++ b/src/renderer/src/test/mockApi.ts
+@@ -49,6 +49,7 @@ export function installMockApi() {
+     watchDocument: vi.fn<ClarityApi['watchDocument']>().mockResolvedValue(undefined),
+     loadImage: vi.fn<ClarityApi['loadImage']>().mockResolvedValue(null),
+     getInitialFile: vi.fn<ClarityApi['getInitialFile']>().mockResolvedValue(null),
++    getInitialFolder: vi.fn<ClarityApi['getInitialFolder']>().mockResolvedValue(null),
+     openExternal: vi.fn<ClarityApi['openExternal']>(),
+     getSettings: vi.fn<ClarityApi['getSettings']>().mockResolvedValue(DEFAULT_UI_SETTINGS),
+     updateSettings: vi.fn<ClarityApi['updateSettings']>(),
+diff --git a/src/shared/api.ts b/src/shared/api.ts
+index 600849d..cf8adf1 100644
+--- a/src/shared/api.ts
++++ b/src/shared/api.ts
+@@ -26,6 +26,7 @@ export type MenuCommand =
+   | 'new-file'
+   | 'open-file'
+   | 'open-folder'
++  | 'close-folder'
+   | 'save'
+   | 'save-as'
+   | 'undo'
+@@ -37,6 +38,7 @@ export const MENU_COMMANDS = [
+   'new-file',
+   'open-file',
+   'open-folder',
++  'close-folder',
+   'save',
+   'save-as',
+   'undo',
+@@ -143,6 +145,8 @@ export interface ClarityApi {
+   loadImage(documentPath: string, src: string): Promise<string | null>
+   /** The path of the Markdown file requested on launch, if any. */
+   getInitialFile(): Promise<string | null>
++  /** The folder restored on launch, if any. */
++  getInitialFolder(): Promise<OpenedFolder | null>
+   /** Opens an http or https link in the system browser. Other links are ignored. */
+   openExternal(url: string): void
+   getSettings(): Promise<UiSettings>
+@@ -178,6 +182,7 @@ export const IpcChannel = {
+   WatchDocument: 'clarity:watch-document',
+   LoadImage: 'clarity:load-image',
+   GetInitialFile: 'clarity:get-initial-file',
++  GetInitialFolder: 'clarity:get-initial-folder',
+   OpenExternal: 'clarity:open-external',
+   GetSettings: 'clarity:get-settings',
+   UpdateSettings: 'clarity:update-settings',
+diff --git a/src/shared/shortcuts.ts b/src/shared/shortcuts.ts
+index 1e1d032..f75d1f2 100644
+--- a/src/shared/shortcuts.ts
++++ b/src/shared/shortcuts.ts
+@@ -61,6 +61,7 @@ export const SHORTCUTS = [
+   { id: 'new-file', group: 'File', label: 'New document', keys: ['CmdOrCtrl+N'], source: MENU },
+   { id: 'open-file', group: 'File', label: 'Open file', keys: ['CmdOrCtrl+O'], source: MENU },
+   { id: 'open-folder', group: 'File', label: 'Open folder', keys: ['CmdOrCtrl+Shift+O'], source: MENU },
++  { id: 'close-folder', group: 'File', label: 'Close folder', keys: ['CmdOrCtrl+Alt+W'], source: MENU },
+   { id: 'save', group: 'File', label: 'Save', keys: ['CmdOrCtrl+S'], source: MENU },
+   { id: 'save-as', group: 'File', label: 'Save as', keys: ['CmdOrCtrl+Shift+S'], source: MENU },
+   // Electron's quit role has no accelerator on Windows.

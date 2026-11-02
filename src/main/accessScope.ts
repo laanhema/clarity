@@ -50,6 +50,11 @@ export class AccessScope {
     this.#pickedFolder = null
   }
 
+  /** Clears the granted folder, revoking access to its files. */
+  dropFolder(): void {
+    this.#folder = null
+  }
+
   /** Grants access to a folder. Returns its real path. */
   async grantFolder(folderPath: string): Promise<string> {
     const real = await realpath(folderPath)
