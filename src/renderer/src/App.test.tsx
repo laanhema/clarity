@@ -450,6 +450,20 @@ describe('selecting text in the editor', () => {
     }
   })
 
+  it('defines directory colors for light, dark, and custom themes', () => {
+    const lightBlock = /:root\s*\{([^}]*)\}/.exec(styles)?.[1] ?? ''
+    expect(lightBlock).toMatch(/--dir:\s*#2e6be6;/)
+
+    const darkBlock = /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{[\s\S]*?:root\s*\{([^}]*)\}/.exec(styles)?.[1] ?? ''
+    expect(darkBlock).toMatch(/--dir:\s*#79c0ff;/)
+
+    const gruvboxBlock = /:root\[data-theme='gruvbox-material-dark-hard'\]\s*\{([^}]*)\}/.exec(styles)?.[1] ?? ''
+    expect(gruvboxBlock).toMatch(/--dir:\s*#a9b665;/)
+
+    const tokyoBlock = /:root\[data-theme='tokyo-night-moon'\]\s*\{([^}]*)\}/.exec(styles)?.[1] ?? ''
+    expect(tokyoBlock).toMatch(/--dir:\s*#82aaff;/)
+  })
+
   // CodeMirror draws the selection behind the text, so an opaque active line
   // would hide a selection made within the line the cursor is on.
   it('keeps the active line translucent in every theme', () => {
