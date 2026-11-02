@@ -10,3 +10,8 @@ coverage/
 *.log
 .env
 .env.*
+.lavish/
+TODO.md
+todo.md
+TODO.txt
+todo.txt
