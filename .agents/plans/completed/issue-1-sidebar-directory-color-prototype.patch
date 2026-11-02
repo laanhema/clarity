@@ -1,0 +1,22 @@
+diff --git a/src/renderer/src/styles.css b/src/renderer/src/styles.css
+index cd1977a..941365d 100644
+--- a/src/renderer/src/styles.css
++++ b/src/renderer/src/styles.css
+@@ -12,7 +12,7 @@
+   --accent: #2e6be6;
+   --unsaved: #d4740b;
+   --danger: #c4314b;
+-  --dir: #0b4fa8;
++  --dir: #2e6be6;
+   --md-heading: #0b4fa8;
+   --md-link: #2e6be6;
+   --md-code: #9a3d00;
+@@ -60,7 +60,7 @@
+     --accent: #4493f8;
+     --unsaved: #d29922;
+     --danger: #f85149;
+-    --dir: #4493f8;
++    --dir: #79c0ff;
+     --md-heading: #79c0ff;
+     --md-link: #a5d6ff;
+     --md-code: #79c0ff;
