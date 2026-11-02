@@ -12,6 +12,7 @@ import {
 } from '../shared/api'
 import { listMarkdownTree } from './fileTree'
 import { MAX_IMAGE_BYTES, imageMimeType } from './images'
+import { isMarkdownPath } from './pathGuard'
 import { openExternally } from './security'
 import { addRecentFolder, sanitizeUiPatch, type SettingsStore } from './settings'
 import { watchDocumentFile, watchFolderTree } from './watchers'
@@ -89,6 +90,28 @@ export async function openRecentFolder(state: WindowState, folder: string, setti
     return
   }
   send(state, IpcChannel.FolderPicked, rootPath)
+}
+
+/**
+ * Grants access to a Markdown file requested from the command line or another
+ * instance and asks the renderer to open it. Shows an error if the file
+ * cannot be opened.
+ */
+export async function openFileFromExternal(state: WindowState, targetPath: string): Promise<boolean> {
+  if (!isMarkdownPath(targetPath)) return false
+  let realPath: string
+  try {
+    realPath = await state.scope.grantFile(targetPath)
+  } catch {
+    await dialog.showMessageBox(state.window, {
+      type: 'error',
+      message: `"${path.basename(targetPath)}" could not be opened.`,
+      detail: `${targetPath}\n\nThe file does not exist or is not accessible.`,
+    })
+    return false
+  }
+  send(state, IpcChannel.FilePicked, realPath)
+  return true
 }
 
 async function pickFolder(state: WindowState): Promise<string | null> {
@@ -249,6 +272,16 @@ export function registerIpcHandlers(settings: SettingsStore): void {
   ipcMain.handle(IpcChannel.LoadImage, (event, documentPath: unknown, src: unknown) =>
     loadImage(senderState(event), documentPath, src),
   )
+
+  ipcMain.handle(IpcChannel.GetInitialFile, async (event): Promise<string | null> => {
+    const state = senderState(event)
+    if (!state.initialFile) return null
+    try {
+      return await state.initialFile
+    } finally {
+      state.initialFile = null
+    }
+  })
 
   ipcMain.handle(IpcChannel.GetSettings, (event): UiSettings => {
     senderState(event)

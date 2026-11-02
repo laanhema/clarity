@@ -49,6 +49,7 @@ const api: ClarityApi = {
   closeWindow: () => ipcRenderer.send(IpcChannel.CloseWindow),
   watchDocument: (path) => invoke(IpcChannel.WatchDocument, path),
   loadImage: (documentPath, src) => invoke(IpcChannel.LoadImage, documentPath, src),
+  getInitialFile: () => invoke(IpcChannel.GetInitialFile),
   openExternal: (url) => ipcRenderer.send(IpcChannel.OpenExternal, url),
   getSettings: () => invoke(IpcChannel.GetSettings),
   updateSettings: (patch) => ipcRenderer.send(IpcChannel.UpdateSettings, patch),
@@ -62,6 +63,10 @@ const api: ClarityApi = {
   onFolderPicked: (listener) =>
     subscribe(IpcChannel.FolderPicked, (_event, rootPath) => {
       if (typeof rootPath === 'string') listener(rootPath)
+    }),
+  onFilePicked: (listener) =>
+    subscribe(IpcChannel.FilePicked, (_event, filePath) => {
+      if (typeof filePath === 'string') listener(filePath)
     }),
   onDocumentChanged: (listener) =>
     subscribe(IpcChannel.DocumentChanged, (_event, path) => {

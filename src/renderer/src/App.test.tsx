@@ -84,6 +84,31 @@ describe('App layout', () => {
     expect(screen.getByText('0 words')).toBeInTheDocument()
     expect(screen.getByText('0 tokens')).toBeInTheDocument()
   })
+
+  it('opens an initial file passed on launch', async () => {
+    mock.api.getInitialFile.mockResolvedValue('/notes/first.md')
+    render(<App />)
+    await waitFor(() => expect(editorText()).toBe('# First'))
+    expect(screen.getByText('/notes/first.md')).toBeInTheDocument()
+  })
+
+  it('opens a file passed from an external launch while running', async () => {
+    render(<App />)
+    expect(editorText()).toBe('')
+    mock.pickFileFromExternal('/notes/second.md')
+    await waitFor(() => expect(editorText()).toBe('# Second'))
+    expect(screen.getByText('/notes/second.md')).toBeInTheDocument()
+  })
+
+  it('asks to save unsaved changes when an external launch arrives while dirty', async () => {
+    await openFirstFileAndEdit()
+    expect(editorText()).toBe('# First edited')
+    mock.api.confirmUnsaved.mockResolvedValue('cancel')
+    mock.pickFileFromExternal('/notes/second.md')
+    await waitFor(() => expect(mock.api.confirmUnsaved).toHaveBeenCalledWith('first.md'))
+    expect(editorText()).toBe('# First edited')
+    expect(mock.api.readFile).not.toHaveBeenCalledWith('/notes/second.md')
+  })
 })
 
 describe('unsaved changes', () => {

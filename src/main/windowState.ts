@@ -7,6 +7,8 @@ export interface WindowState {
   window: BrowserWindow
   scope: AccessScope
   dirty: boolean
+  /** Promise resolving to the real path of a file to open once the window finishes loading. */
+  initialFile: Promise<string | null> | null
   /** Set once the renderer has dealt with unsaved changes and asked to close. */
   closeConfirmed: boolean
   /** Set when the close was part of quitting the app, so the quit can resume. */
@@ -26,6 +28,7 @@ export function trackWindow(window: BrowserWindow): WindowState {
     window,
     scope: new AccessScope(),
     dirty: false,
+    initialFile: null,
     closeConfirmed: false,
     quitAfterClose: false,
     documentPath: null,

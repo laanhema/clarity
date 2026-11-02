@@ -103,6 +103,21 @@ export function App() {
     }
   }, [api])
 
+  const openInitialFile = useEffectEvent((path: string) => void openPath(path))
+
+  useEffect(() => {
+    let cancelled = false
+    api.getInitialFile().then(
+      (path) => {
+        if (!cancelled && path) openInitialFile(path)
+      },
+      () => undefined,
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [api])
+
   // styles.css picks the theme's colours and layout from this attribute.
   useEffect(() => {
     document.documentElement.dataset['theme'] = settings.theme
@@ -331,12 +346,14 @@ export function App() {
   })
 
   const onFolderPicked = useEffectEvent((rootPath: string) => void exclusive(() => enterFolder(rootPath)))
+  const onFilePicked = useEffectEvent((filePath: string) => void openPath(filePath))
   const onDocumentChanged = useEffectEvent((path: string) => void checkExternalChange(path))
   const onTreeChanged = useEffectEvent(() => void refreshTree().catch(() => undefined))
 
   useEffect(() => api.onMenuCommand((command) => onMenuCommand(command)), [api])
   useEffect(() => api.onCloseRequested(() => onCloseRequested()), [api])
   useEffect(() => api.onFolderPicked((rootPath) => onFolderPicked(rootPath)), [api])
+  useEffect(() => api.onFilePicked((filePath) => onFilePicked(filePath)), [api])
   useEffect(() => api.onDocumentChanged((path) => onDocumentChanged(path)), [api])
   useEffect(() => api.onTreeChanged(() => onTreeChanged()), [api])
 

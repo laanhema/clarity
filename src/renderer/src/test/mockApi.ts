@@ -28,6 +28,7 @@ export function installMockApi() {
   const close = listenerSet<[]>()
   const settings = listenerSet<[UiSettings]>()
   const folderPicked = listenerSet<[string]>()
+  const filePicked = listenerSet<[string]>()
   const documentChanged = listenerSet<[string]>()
   const treeChanged = listenerSet<[]>()
 
@@ -47,6 +48,7 @@ export function installMockApi() {
     closeWindow: vi.fn<ClarityApi['closeWindow']>(),
     watchDocument: vi.fn<ClarityApi['watchDocument']>().mockResolvedValue(undefined),
     loadImage: vi.fn<ClarityApi['loadImage']>().mockResolvedValue(null),
+    getInitialFile: vi.fn<ClarityApi['getInitialFile']>().mockResolvedValue(null),
     openExternal: vi.fn<ClarityApi['openExternal']>(),
     getSettings: vi.fn<ClarityApi['getSettings']>().mockResolvedValue(DEFAULT_UI_SETTINGS),
     updateSettings: vi.fn<ClarityApi['updateSettings']>(),
@@ -54,6 +56,7 @@ export function installMockApi() {
     onCloseRequested: vi.fn<ClarityApi['onCloseRequested']>(close.subscribe),
     onSettingsChanged: vi.fn<ClarityApi['onSettingsChanged']>(settings.subscribe),
     onFolderPicked: vi.fn<ClarityApi['onFolderPicked']>(folderPicked.subscribe),
+    onFilePicked: vi.fn<ClarityApi['onFilePicked']>(filePicked.subscribe),
     onDocumentChanged: vi.fn<ClarityApi['onDocumentChanged']>(documentChanged.subscribe),
     onTreeChanged: vi.fn<ClarityApi['onTreeChanged']>(treeChanged.subscribe),
   } satisfies ClarityApi
@@ -70,6 +73,8 @@ export function installMockApi() {
     changeSettings: (next: UiSettings) => settings.emit(next),
     /** Simulates picking a folder from Open Recent. */
     pickFolderFromMenu: (rootPath: string) => folderPicked.emit(rootPath),
+    /** Simulates opening a file from the command line or another instance. */
+    pickFileFromExternal: (filePath: string) => filePicked.emit(filePath),
     /** Simulates another program changing the watched document. */
     changeDocumentOnDisk: (path: string) => documentChanged.emit(path),
     /** Simulates files being added or removed in the open folder. */
