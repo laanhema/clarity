@@ -102,7 +102,8 @@
       "syncDesktopName": true,
       "desktop": {
         "entry": {
-          "Name": "Clarity"
+          "Name": "Clarity",
+          "MimeType": "text/markdown;text/x-markdown;"
         }
       }
     },

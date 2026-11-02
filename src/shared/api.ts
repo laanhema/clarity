@@ -141,6 +141,8 @@ export interface ClarityApi {
    * Only images inside the open folder load; anything else resolves to null.
    */
   loadImage(documentPath: string, src: string): Promise<string | null>
+  /** The path of the Markdown file requested on launch, if any. */
+  getInitialFile(): Promise<string | null>
   /** Opens an http or https link in the system browser. Other links are ignored. */
   openExternal(url: string): void
   getSettings(): Promise<UiSettings>
@@ -153,6 +155,8 @@ export interface ClarityApi {
   onSettingsChanged(listener: (settings: UiSettings) => void): () => void
   /** Subscribes to folders picked from the Open Recent menu; the listener answers with `enterFolder`. */
   onFolderPicked(listener: (rootPath: string) => void): () => void
+  /** Subscribes to files requested to open from the command line or another instance. */
+  onFilePicked(listener: (filePath: string) => void): () => void
   /** Subscribes to changes of the watched document made by other programs. */
   onDocumentChanged(listener: (path: string) => void): () => void
   /** Subscribes to Markdown files being added to or removed from the open folder. */
@@ -173,6 +177,7 @@ export const IpcChannel = {
   CloseWindow: 'clarity:close-window',
   WatchDocument: 'clarity:watch-document',
   LoadImage: 'clarity:load-image',
+  GetInitialFile: 'clarity:get-initial-file',
   OpenExternal: 'clarity:open-external',
   GetSettings: 'clarity:get-settings',
   UpdateSettings: 'clarity:update-settings',
@@ -180,6 +185,7 @@ export const IpcChannel = {
   CloseRequested: 'clarity:close-requested',
   SettingsChanged: 'clarity:settings-changed',
   FolderPicked: 'clarity:folder-picked',
+  FilePicked: 'clarity:file-picked',
   DocumentChanged: 'clarity:document-changed',
   TreeChanged: 'clarity:tree-changed',
 } as const

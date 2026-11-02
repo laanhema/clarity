@@ -1,7 +1,8 @@
 import { app, BrowserWindow, Menu, nativeTheme, screen } from 'electron'
 import { join } from 'node:path'
 import { INITIAL_THEME_SWITCH, IpcChannel, type UiSettings } from '../shared/api'
-import { openRecentFolder, registerIpcHandlers } from './ipc'
+import { grantLaunchFile, openFileFromExternal, openRecentFolder, registerIpcHandlers } from './ipc'
+import { parseLaunchFilePath } from './launchArgs'
 import { buildMenu } from './menu'
 import { denyAllPermissions, hardenWebContents } from './security'
 import {
@@ -22,7 +23,7 @@ function backgroundColor(ui: UiSettings): string {
   return windowBackground(ui.theme, nativeTheme.shouldUseDarkColors)
 }
 
-function createWindow(settings: SettingsStore): BrowserWindow {
+function createWindow(settings: SettingsStore, initialFile?: string | null): BrowserWindow {
   const workAreas = screen.getAllDisplays().map((display) => display.workArea)
   const { bounds, maximized } = restoreBounds(settings.current.window, workAreas)
   const window = new BrowserWindow({
@@ -46,6 +47,10 @@ function createWindow(settings: SettingsStore): BrowserWindow {
   })
   if (maximized) window.maximize()
   const state = trackWindow(window)
+
+  if (initialFile) {
+    state.initialFile = grantLaunchFile(state, initialFile)
+  }
 
   let boundsTimer: ReturnType<typeof setTimeout> | null = null
   const saveBounds = () => {
@@ -110,58 +115,102 @@ function broadcastUiSettings(ui: UiSettings): void {
   }
 }
 
-app.enableSandbox()
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
 
-app.on('web-contents-created', (_event, contents) => hardenWebContents(contents))
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  let settings: SettingsStore | null = null
+  let macOpenFile: string | null = null
 
-app.on('before-quit', () => {
-  quitting = true
-})
+  app.on('second-instance', (_event, argv, workingDirectory) => {
+    const window = BrowserWindow.getAllWindows()[0]
+    const target = parseLaunchFilePath(argv, workingDirectory)
+    if (!window) {
+      if (settings && target) createWindow(settings, target)
+      return
+    }
+    if (window.isMinimized()) window.restore()
+    window.focus()
 
-void app.whenReady().then(async () => {
-  const settingsFile = join(app.getPath('userData'), 'settings.json')
-  await migrateLegacySettings(
-    settingsFile,
-    LEGACY_USER_DATA_FOLDERS.map((folder) => join(app.getPath('appData'), folder, 'settings.json')),
-  )
-  const settings = await SettingsStore.load(settingsFile)
-  denyAllPermissions()
-  registerIpcHandlers(settings)
-
-  let previous = settings.current
-  applySettings(settings, null)
-  settings.onChange((next) => {
-    applySettings(settings, previous)
-    previous = next
+    if (target) {
+      const state = stateFor(window.webContents)
+      if (state) void openFileFromExternal(state, target)
+    }
   })
 
-  createWindow(settings)
-
-  const recent = settings.current.recentFolders
-  const existing = await pruneRecentFolders(recent)
-  if (existing.length !== recent.length) {
-    settings.update((current) => ({
-      ...current,
-      recentFolders: current.recentFolders.filter((folder) => existing.includes(folder)),
-    }))
-  }
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow(settings)
-  })
-
-  // Write pending settings (window size, recent folders) before the app exits.
-  let flushed = false
-  app.on('will-quit', (event) => {
-    if (flushed) return
+  app.on('open-file', (event, filePath) => {
     event.preventDefault()
-    void settings.flush().finally(() => {
-      flushed = true
-      app.quit()
+    if (!app.isReady() || !settings) {
+      macOpenFile = filePath
+      return
+    }
+    const window = BrowserWindow.getAllWindows()[0]
+    if (window) {
+      if (window.isMinimized()) window.restore()
+      window.focus()
+      const state = stateFor(window.webContents)
+      if (state) void openFileFromExternal(state, filePath)
+    } else {
+      createWindow(settings, filePath)
+    }
+  })
+
+  app.enableSandbox()
+
+  app.on('web-contents-created', (_event, contents) => hardenWebContents(contents))
+
+  app.on('before-quit', () => {
+    quitting = true
+  })
+
+  void app.whenReady().then(async () => {
+    const settingsFile = join(app.getPath('userData'), 'settings.json')
+    await migrateLegacySettings(
+      settingsFile,
+      LEGACY_USER_DATA_FOLDERS.map((folder) => join(app.getPath('appData'), folder, 'settings.json')),
+    )
+    const loadedSettings = await SettingsStore.load(settingsFile)
+    settings = loadedSettings
+    denyAllPermissions()
+    registerIpcHandlers(loadedSettings)
+
+    let previous = loadedSettings.current
+    applySettings(loadedSettings, null)
+    loadedSettings.onChange((next) => {
+      applySettings(loadedSettings, previous)
+      previous = next
+    })
+
+    const startupFile = macOpenFile ?? parseLaunchFilePath(process.argv, process.cwd())
+    createWindow(loadedSettings, startupFile)
+
+    const recent = loadedSettings.current.recentFolders
+    const existing = await pruneRecentFolders(recent)
+    if (existing.length !== recent.length) {
+      loadedSettings.update((current) => ({
+        ...current,
+        recentFolders: current.recentFolders.filter((folder) => existing.includes(folder)),
+      }))
+    }
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow(loadedSettings)
+    })
+
+    // Write pending settings (window size, recent folders) before the app exits.
+    let flushed = false
+    app.on('will-quit', (event) => {
+      if (flushed) return
+      event.preventDefault()
+      void loadedSettings.flush().finally(() => {
+        flushed = true
+        app.quit()
+      })
     })
   })
-})
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit()
+  })
+}
