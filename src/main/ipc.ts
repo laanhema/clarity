@@ -74,6 +74,7 @@ async function enterFolder(state: WindowState, requested: unknown, settings: Set
 
 /** Picks a folder from the Open Recent menu and hands it to the renderer, which settles the document and enters it. */
 export async function openRecentFolder(state: WindowState, folder: string, settings: SettingsStore): Promise<void> {
+  state.initialFile = null
   let rootPath: string
   try {
     rootPath = await state.scope.pickFolder(folder)
@@ -93,23 +94,32 @@ export async function openRecentFolder(state: WindowState, folder: string, setti
 }
 
 /**
- * Grants access to a Markdown file requested from the command line or another
- * instance and asks the renderer to open it. Shows an error if the file
- * cannot be opened.
+ * Grants access to a Markdown file, showing an error dialog if the file
+ * cannot be opened. Returns the resolved real path, or null on failure.
  */
-export async function openFileFromExternal(state: WindowState, targetPath: string): Promise<boolean> {
-  if (!isMarkdownPath(targetPath)) return false
-  let realPath: string
+export async function grantLaunchFile(state: WindowState, targetPath: string): Promise<string | null> {
+  if (!isMarkdownPath(targetPath)) return null
   try {
-    realPath = await state.scope.grantFile(targetPath)
+    return await state.scope.grantFile(targetPath)
   } catch {
     await dialog.showMessageBox(state.window, {
       type: 'error',
       message: `"${path.basename(targetPath)}" could not be opened.`,
       detail: `${targetPath}\n\nThe file does not exist or is not accessible.`,
     })
-    return false
+    return null
   }
+}
+
+/**
+ * Grants access to a Markdown file requested from the command line or another
+ * instance and asks the renderer to open it. Shows an error if the file
+ * cannot be opened.
+ */
+export async function openFileFromExternal(state: WindowState, targetPath: string): Promise<boolean> {
+  state.initialFile = null
+  const realPath = await grantLaunchFile(state, targetPath)
+  if (!realPath) return false
   send(state, IpcChannel.FilePicked, realPath)
   return true
 }
@@ -229,13 +239,23 @@ async function loadImage(state: WindowState, documentPath: unknown, src: unknown
 }
 
 export function registerIpcHandlers(settings: SettingsStore): void {
-  ipcMain.handle(IpcChannel.PickFolder, (event) => pickFolder(senderState(event)))
+  ipcMain.handle(IpcChannel.PickFolder, (event) => {
+    const state = senderState(event)
+    state.initialFile = null
+    return pickFolder(state)
+  })
 
-  ipcMain.handle(IpcChannel.EnterFolder, (event, rootPath: unknown) =>
-    enterFolder(senderState(event), rootPath, settings),
-  )
+  ipcMain.handle(IpcChannel.EnterFolder, (event, rootPath: unknown) => {
+    const state = senderState(event)
+    state.initialFile = null
+    return enterFolder(state, rootPath, settings)
+  })
 
-  ipcMain.handle(IpcChannel.OpenFile, (event) => openFile(senderState(event)))
+  ipcMain.handle(IpcChannel.OpenFile, (event) => {
+    const state = senderState(event)
+    state.initialFile = null
+    return openFile(state)
+  })
 
   ipcMain.handle(IpcChannel.ListMarkdownFiles, async (event): Promise<FileTreeNode[]> => {
     const { folder } = senderState(event).scope
@@ -243,7 +263,9 @@ export function registerIpcHandlers(settings: SettingsStore): void {
   })
 
   ipcMain.handle(IpcChannel.ReadFile, async (event, requested: unknown) => {
-    const filePath = await senderState(event).scope.resolveForRead(requested)
+    const state = senderState(event)
+    state.initialFile = null
+    const filePath = await state.scope.resolveForRead(requested)
     return readTextFile(filePath)
   })
 
@@ -276,11 +298,7 @@ export function registerIpcHandlers(settings: SettingsStore): void {
   ipcMain.handle(IpcChannel.GetInitialFile, async (event): Promise<string | null> => {
     const state = senderState(event)
     if (!state.initialFile) return null
-    try {
-      return await state.initialFile
-    } finally {
-      state.initialFile = null
-    }
+    return state.initialFile
   })
 
   ipcMain.handle(IpcChannel.GetSettings, (event): UiSettings => {

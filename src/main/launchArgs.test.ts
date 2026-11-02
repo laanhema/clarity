@@ -41,4 +41,9 @@ describe('parseLaunchFilePath', () => {
   it('supports positional arguments after -- delimiter', () => {
     expect(parseLaunchFilePath(['clarity', '--', '-weird-name.md'], cwd)).toBe(path.join(cwd, '-weird-name.md'))
   })
+
+  it('ignores executable path in argv[0] even if it ends with .md or .markdown', () => {
+    expect(parseLaunchFilePath(['clarity.md', 'notes.md'], cwd)).toBe(path.join(cwd, 'notes.md'))
+    expect(parseLaunchFilePath(['/usr/local/bin/clarity.markdown'], cwd)).toBeNull()
+  })
 })

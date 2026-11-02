@@ -1,10 +1,9 @@
-import { app, BrowserWindow, dialog, Menu, nativeTheme, screen } from 'electron'
-import { basename, join } from 'node:path'
+import { app, BrowserWindow, Menu, nativeTheme, screen } from 'electron'
+import { join } from 'node:path'
 import { INITIAL_THEME_SWITCH, IpcChannel, type UiSettings } from '../shared/api'
-import { openFileFromExternal, openRecentFolder, registerIpcHandlers } from './ipc'
+import { grantLaunchFile, openFileFromExternal, openRecentFolder, registerIpcHandlers } from './ipc'
 import { parseLaunchFilePath } from './launchArgs'
 import { buildMenu } from './menu'
-import { isMarkdownPath } from './pathGuard'
 import { denyAllPermissions, hardenWebContents } from './security'
 import {
   LEGACY_USER_DATA_FOLDERS,
@@ -49,19 +48,8 @@ function createWindow(settings: SettingsStore, initialFile?: string | null): Bro
   if (maximized) window.maximize()
   const state = trackWindow(window)
 
-  if (initialFile && isMarkdownPath(initialFile)) {
-    state.initialFile = (async () => {
-      try {
-        return await state.scope.grantFile(initialFile)
-      } catch {
-        await dialog.showMessageBox(window, {
-          type: 'error',
-          message: `"${basename(initialFile)}" could not be opened.`,
-          detail: `${initialFile}\n\nThe file does not exist or is not accessible.`,
-        })
-        return null
-      }
-    })()
+  if (initialFile) {
+    state.initialFile = grantLaunchFile(state, initialFile)
   }
 
   let boundsTimer: ReturnType<typeof setTimeout> | null = null
@@ -132,15 +120,19 @@ const gotSingleInstanceLock = app.requestSingleInstanceLock()
 if (!gotSingleInstanceLock) {
   app.quit()
 } else {
+  let settings: SettingsStore | null = null
   let macOpenFile: string | null = null
 
   app.on('second-instance', (_event, argv, workingDirectory) => {
     const window = BrowserWindow.getAllWindows()[0]
-    if (!window) return
+    const target = parseLaunchFilePath(argv, workingDirectory)
+    if (!window) {
+      if (settings && target) createWindow(settings, target)
+      return
+    }
     if (window.isMinimized()) window.restore()
     window.focus()
 
-    const target = parseLaunchFilePath(argv, workingDirectory)
     if (target) {
       const state = stateFor(window.webContents)
       if (state) void openFileFromExternal(state, target)
@@ -149,7 +141,7 @@ if (!gotSingleInstanceLock) {
 
   app.on('open-file', (event, filePath) => {
     event.preventDefault()
-    if (!app.isReady()) {
+    if (!app.isReady() || !settings) {
       macOpenFile = filePath
       return
     }
@@ -159,6 +151,8 @@ if (!gotSingleInstanceLock) {
       window.focus()
       const state = stateFor(window.webContents)
       if (state) void openFileFromExternal(state, filePath)
+    } else {
+      createWindow(settings, filePath)
     }
   })
 
@@ -176,31 +170,32 @@ if (!gotSingleInstanceLock) {
       settingsFile,
       LEGACY_USER_DATA_FOLDERS.map((folder) => join(app.getPath('appData'), folder, 'settings.json')),
     )
-    const settings = await SettingsStore.load(settingsFile)
+    const loadedSettings = await SettingsStore.load(settingsFile)
+    settings = loadedSettings
     denyAllPermissions()
-    registerIpcHandlers(settings)
+    registerIpcHandlers(loadedSettings)
 
-    let previous = settings.current
-    applySettings(settings, null)
-    settings.onChange((next) => {
-      applySettings(settings, previous)
+    let previous = loadedSettings.current
+    applySettings(loadedSettings, null)
+    loadedSettings.onChange((next) => {
+      applySettings(loadedSettings, previous)
       previous = next
     })
 
     const startupFile = macOpenFile ?? parseLaunchFilePath(process.argv, process.cwd())
-    createWindow(settings, startupFile)
+    createWindow(loadedSettings, startupFile)
 
-    const recent = settings.current.recentFolders
+    const recent = loadedSettings.current.recentFolders
     const existing = await pruneRecentFolders(recent)
     if (existing.length !== recent.length) {
-      settings.update((current) => ({
+      loadedSettings.update((current) => ({
         ...current,
         recentFolders: current.recentFolders.filter((folder) => existing.includes(folder)),
       }))
     }
 
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow(settings)
+      if (BrowserWindow.getAllWindows().length === 0) createWindow(loadedSettings)
     })
 
     // Write pending settings (window size, recent folders) before the app exits.
@@ -208,7 +203,7 @@ if (!gotSingleInstanceLock) {
     app.on('will-quit', (event) => {
       if (flushed) return
       event.preventDefault()
-      void settings.flush().finally(() => {
+      void loadedSettings.flush().finally(() => {
         flushed = true
         app.quit()
       })
