@@ -1,0 +1,17 @@
+diff --git a/src/renderer/src/components/Editor.tsx b/src/renderer/src/components/Editor.tsx
+index 51c00b8..3e89dad 100644
+--- a/src/renderer/src/components/Editor.tsx
++++ b/src/renderer/src/components/Editor.tsx
+@@ -63,8 +63,10 @@ const editorTheme = EditorView.theme({
+   '&.cm-focused > .cm-scroller > .cm-rowSelectionLayer .cm-selectionBackground, .cm-selectionBackground, ::selection':
+     { backgroundColor: 'var(--editor-selection)' },
+   // Painted only behind the text, not the padding, so it spans the same
+-  // column as a selection does.
+-  '.cm-activeLine': { backgroundColor: 'var(--editor-active-line)', backgroundClip: 'content-box' },
++  // column as a selection does. Highlighted only while the editor has focus,
++  // so opening a file does not highlight line 1 before the user moves into it.
++  '.cm-activeLine': { backgroundColor: 'transparent', backgroundClip: 'content-box' },
++  '&.cm-focused .cm-activeLine': { backgroundColor: 'var(--editor-active-line)' },
+   '.cm-selectionMatch': { backgroundColor: 'var(--editor-match)' },
+   '.cm-searchMatch': { backgroundColor: 'var(--editor-match)', outline: '1px solid var(--border)' },
+   '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'var(--editor-match-selected)' },

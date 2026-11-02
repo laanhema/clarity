@@ -487,6 +487,25 @@ describe('selecting text in the editor', () => {
     expect(css).toMatch(/\.cm-selectionLayer \{[^}]*display: none/)
     expect(root.querySelector('.cm-rowSelectionLayer')).not.toBeNull()
   })
+
+  it('does not highlight the active line until the editor is focused', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Open Folder' }))
+    await user.click(await screen.findByRole('button', { name: 'first.md' }))
+    await waitFor(() => expect(editorText()).toBe('# First'))
+
+    const root = editorRoot()
+    const cmEditor = root.querySelector('.cm-editor')
+    expect(cmEditor).not.toHaveClass('cm-focused')
+
+    const css = [...root.querySelectorAll('style')].map((style) => style.textContent).join('\n')
+    expect(css).toMatch(/\.cm-activeLine \{[^}]*background-color:\s*transparent/)
+    expect(css).toMatch(/cm-focused\s+\.cm-activeLine \{[^}]*background-color:\s*var\(--editor-active-line\)/)
+
+    await user.click(editor())
+    expect(cmEditor).toHaveClass('cm-focused')
+  })
 })
 
 describe('new documents', () => {
