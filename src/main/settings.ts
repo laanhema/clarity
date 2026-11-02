@@ -28,11 +28,13 @@ export interface Settings {
   /** Most recent first. */
   recentFolders: string[]
   window: WindowBounds | null
+  lastFolder: string | null
+  lastFile: string | null
 }
 
 export const MAX_RECENT_FOLDERS = 10
 export function defaultSettings(): Settings {
-  return { ui: { ...DEFAULT_UI_SETTINGS }, recentFolders: [], window: null }
+  return { ui: { ...DEFAULT_UI_SETTINGS }, recentFolders: [], window: null, lastFolder: null, lastFile: null }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -85,6 +87,10 @@ function parseWindowBounds(value: unknown): WindowBounds | null {
   }
 }
 
+function parsePathOrNull(value: unknown): string | null {
+  return typeof value === 'string' && path.isAbsolute(value) ? value : null
+}
+
 /** Parses a settings file, falling back to defaults for anything missing or invalid. */
 export function parseSettings(raw: string): Settings {
   let data: unknown
@@ -102,6 +108,8 @@ export function parseSettings(raw: string): Settings {
       .filter((entry, index, all) => all.indexOf(entry) === index)
       .slice(0, MAX_RECENT_FOLDERS),
     window: parseWindowBounds(data['window']),
+    lastFolder: parsePathOrNull(data['lastFolder']),
+    lastFile: parsePathOrNull(data['lastFile']),
   }
 }
 

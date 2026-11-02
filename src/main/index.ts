@@ -1,7 +1,14 @@
 import { app, BrowserWindow, Menu, nativeTheme, screen } from 'electron'
 import { join } from 'node:path'
 import { INITIAL_THEME_SWITCH, IpcChannel, type UiSettings } from '../shared/api'
-import { grantLaunchFile, openFileFromExternal, openRecentFolder, registerIpcHandlers } from './ipc'
+import {
+  grantLaunchFile,
+  openFileFromExternal,
+  openRecentFolder,
+  registerIpcHandlers,
+  restoreSessionFile,
+  restoreSessionFolder,
+} from './ipc'
 import { parseLaunchFilePath } from './launchArgs'
 import { buildMenu } from './menu'
 import { denyAllPermissions, hardenWebContents } from './security'
@@ -50,6 +57,9 @@ function createWindow(settings: SettingsStore, initialFile?: string | null): Bro
 
   if (initialFile) {
     state.initialFile = grantLaunchFile(state, initialFile)
+  } else {
+    state.initialFolder = restoreSessionFolder(state, settings)
+    state.initialFile = restoreSessionFile(state, settings)
   }
 
   let boundsTimer: ReturnType<typeof setTimeout> | null = null

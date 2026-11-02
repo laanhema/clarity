@@ -8,6 +8,7 @@ export interface SidebarProps {
   dirty: boolean
   onSelectFile: (path: string) => void
   onOpenFolder: () => void
+  onCloseFolder?: () => void
 }
 
 interface TreeContext {
@@ -125,13 +126,18 @@ function Tree({ nodes, activePath, dirty, onSelectFile }: TreeContext & { nodes:
   )
 }
 
-export function Sidebar({ folder, activePath, dirty, onSelectFile, onOpenFolder }: SidebarProps) {
+export function Sidebar({ folder, activePath, dirty, onSelectFile, onOpenFolder, onCloseFolder }: SidebarProps) {
   return (
     <nav className="sidebar" aria-label="Files">
       <header className="sidebar-header">
         <span className="sidebar-title" title={folder?.rootPath}>
           {folder ? fileName(folder.rootPath) : 'No folder open'}
         </span>
+        {folder && onCloseFolder && (
+          <button type="button" className="sidebar-close" onClick={onCloseFolder} title="Close folder">
+            Close
+          </button>
+        )}
         <button type="button" className="sidebar-open" onClick={onOpenFolder}>
           Open Folder
         </button>

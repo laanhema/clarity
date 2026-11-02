@@ -61,6 +61,7 @@ export function App() {
   const api = window.clarity
   const [folder, setFolder] = useState<OpenedFolder | null>(null)
   const [doc, setDoc] = useState<DocumentState>(NEW_DOCUMENT)
+  const [restored, setRestored] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [settings, setSettings] = useState<UiSettings>(() => ({ ...DEFAULT_UI_SETTINGS, theme: api.initialTheme }))
@@ -103,16 +104,24 @@ export function App() {
     }
   }, [api])
 
-  const openInitialFile = useEffectEvent((path: string) => void openPath(path))
+  const restoreFolder = useEffectEvent((initialFolder: OpenedFolder) => setFolder(initialFolder))
+  const openInitialFile = useEffectEvent((path: string) => openPath(path))
 
   useEffect(() => {
     let cancelled = false
-    api.getInitialFile().then(
-      (path) => {
-        if (!cancelled && path) openInitialFile(path)
-      },
-      () => undefined,
-    )
+    api
+      .getInitialFolder()
+      .then((initialFolder) => {
+        if (!cancelled && initialFolder) restoreFolder(initialFolder)
+        return api.getInitialFile()
+      })
+      .then(async (initialFile) => {
+        if (!cancelled && initialFile) await openInitialFile(initialFile)
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setRestored(true)
+      })
     return () => {
       cancelled = true
     }
@@ -133,8 +142,9 @@ export function App() {
   }, [settings.fontSize])
 
   useEffect(() => {
+    if (!restored) return
     api.watchDocument(doc.path).catch((error: unknown) => setMessage(errorMessage(error)))
-  }, [api, doc.path])
+  }, [api, doc.path, restored])
 
   function updateSettings(patch: Partial<UiSettings>): void {
     setSettings((current) => ({ ...current, ...patch }))
@@ -228,6 +238,16 @@ export function App() {
     return exclusive(async () => {
       const rootPath = await api.pickFolder()
       if (rootPath) await enterFolder(rootPath)
+    })
+  }
+
+  function closeFolder(): Promise<void> {
+    return exclusive(async () => {
+      if (!folder) return
+      if (!(await settleUnsavedChanges(doc))) return
+      await api.closeFolder()
+      setFolder(null)
+      setDoc(loadedDocument(null, ''))
     })
   }
 
@@ -325,6 +345,8 @@ export function App() {
         return void openFileDialog()
       case 'open-folder':
         return void openFolderDialog()
+      case 'close-folder':
+        return void closeFolder()
       case 'save':
         return void exclusive(async () => void (await save(doc)))
       case 'save-as':
@@ -384,6 +406,7 @@ export function App() {
           dirty={dirty}
           onSelectFile={(path) => void openPath(path)}
           onOpenFolder={() => void openFolderDialog()}
+          onCloseFolder={() => void closeFolder()}
         />
         <Splitter
           label="Resize sidebar"

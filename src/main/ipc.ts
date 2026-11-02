@@ -68,12 +68,25 @@ async function enterFolder(state: WindowState, requested: unknown, settings: Set
   const rootPath = await state.scope.grantPickedFolder(requested)
   state.stopFolderWatch?.()
   state.stopFolderWatch = watchFolderTree(rootPath, () => send(state, IpcChannel.TreeChanged))
-  settings.update((current) => ({ ...current, recentFolders: addRecentFolder(current.recentFolders, rootPath) }))
+  settings.update((current) => ({
+    ...current,
+    recentFolders: addRecentFolder(current.recentFolders, rootPath),
+    lastFolder: rootPath,
+  }))
   return { rootPath, tree: await listMarkdownTree(rootPath) }
+}
+
+/** Closes the open folder: revokes access, stops watching it, and clears the session setting. */
+function closeFolder(state: WindowState, settings: SettingsStore): void {
+  state.scope.dropFolder()
+  state.stopFolderWatch?.()
+  state.stopFolderWatch = null
+  settings.update((current) => ({ ...current, lastFolder: null, lastFile: null }))
 }
 
 /** Picks a folder from the Open Recent menu and hands it to the renderer, which settles the document and enters it. */
 export async function openRecentFolder(state: WindowState, folder: string, settings: SettingsStore): Promise<void> {
+  state.initialFolder = null
   state.initialFile = null
   let rootPath: string
   try {
@@ -117,6 +130,7 @@ export async function grantLaunchFile(state: WindowState, targetPath: string): P
  * cannot be opened.
  */
 export async function openFileFromExternal(state: WindowState, targetPath: string): Promise<boolean> {
+  state.initialFolder = null
   state.initialFile = null
   const realPath = await grantLaunchFile(state, targetPath)
   if (!realPath) return false
@@ -211,17 +225,60 @@ async function confirmReload(state: WindowState, documentName: string): Promise<
   return response === 0 ? 'reload' : 'keep'
 }
 
-async function watchDocument(state: WindowState, requested: unknown): Promise<void> {
+/**
+ * Restores the folder from the previous session, granting access and watching it.
+ * If the folder no longer exists or cannot be accessed, clears the setting and returns null.
+ */
+export async function restoreSessionFolder(
+  state: WindowState,
+  settings: SettingsStore,
+): Promise<OpenedFolder | null> {
+  const folderPath = settings.current.lastFolder
+  if (!folderPath) return null
+  try {
+    const realFolder = await state.scope.grantFolder(folderPath)
+    state.stopFolderWatch?.()
+    state.stopFolderWatch = watchFolderTree(realFolder, () => send(state, IpcChannel.TreeChanged))
+    return { rootPath: realFolder, tree: await listMarkdownTree(realFolder) }
+  } catch {
+    settings.update((current) => ({ ...current, lastFolder: null }))
+    return null
+  }
+}
+
+/**
+ * Restores the Markdown file from the previous session, granting access in AccessScope.
+ * If the file no longer exists or cannot be accessed, clears the setting and returns null.
+ */
+export async function restoreSessionFile(
+  state: WindowState,
+  settings: SettingsStore,
+): Promise<string | null> {
+  const filePath = settings.current.lastFile
+  if (!filePath || !isMarkdownPath(filePath)) return null
+  try {
+    return await state.scope.grantFile(filePath)
+  } catch {
+    settings.update((current) => ({ ...current, lastFile: null }))
+    return null
+  }
+}
+
+async function watchDocument(state: WindowState, requested: unknown, settings: SettingsStore): Promise<void> {
   const generation = ++state.documentWatchGeneration
   state.stopDocumentWatch?.()
   state.stopDocumentWatch = null
   state.documentPath = null
-  if (requested === null) return
+  if (requested === null) {
+    settings.update((current) => ({ ...current, lastFile: null }))
+    return
+  }
 
   const reportedPath = requireString(requested, 'path')
   const realPath = await state.scope.resolveForRead(reportedPath)
   if (generation !== state.documentWatchGeneration) return
   state.documentPath = realPath
+  settings.update((current) => ({ ...current, lastFile: realPath }))
   state.stopDocumentWatch = watchDocumentFile(realPath, () => send(state, IpcChannel.DocumentChanged, reportedPath))
 }
 
@@ -241,18 +298,28 @@ async function loadImage(state: WindowState, documentPath: unknown, src: unknown
 export function registerIpcHandlers(settings: SettingsStore): void {
   ipcMain.handle(IpcChannel.PickFolder, (event) => {
     const state = senderState(event)
+    state.initialFolder = null
     state.initialFile = null
     return pickFolder(state)
   })
 
   ipcMain.handle(IpcChannel.EnterFolder, (event, rootPath: unknown) => {
     const state = senderState(event)
+    state.initialFolder = null
     state.initialFile = null
     return enterFolder(state, rootPath, settings)
   })
 
+  ipcMain.handle(IpcChannel.CloseFolder, (event) => {
+    const state = senderState(event)
+    state.initialFolder = null
+    state.initialFile = null
+    closeFolder(state, settings)
+  })
+
   ipcMain.handle(IpcChannel.OpenFile, (event) => {
     const state = senderState(event)
+    state.initialFolder = null
     state.initialFile = null
     return openFile(state)
   })
@@ -264,6 +331,7 @@ export function registerIpcHandlers(settings: SettingsStore): void {
 
   ipcMain.handle(IpcChannel.ReadFile, async (event, requested: unknown) => {
     const state = senderState(event)
+    state.initialFolder = null
     state.initialFile = null
     const filePath = await state.scope.resolveForRead(requested)
     return readTextFile(filePath)
@@ -289,11 +357,19 @@ export function registerIpcHandlers(settings: SettingsStore): void {
     confirmReload(senderState(event), requireString(documentName, 'documentName')),
   )
 
-  ipcMain.handle(IpcChannel.WatchDocument, (event, requested: unknown) => watchDocument(senderState(event), requested))
+  ipcMain.handle(IpcChannel.WatchDocument, (event, requested: unknown) =>
+    watchDocument(senderState(event), requested, settings),
+  )
 
   ipcMain.handle(IpcChannel.LoadImage, (event, documentPath: unknown, src: unknown) =>
     loadImage(senderState(event), documentPath, src),
   )
+
+  ipcMain.handle(IpcChannel.GetInitialFolder, async (event): Promise<OpenedFolder | null> => {
+    const state = senderState(event)
+    if (!state.initialFolder) return null
+    return state.initialFolder
+  })
 
   ipcMain.handle(IpcChannel.GetInitialFile, async (event): Promise<string | null> => {
     const state = senderState(event)

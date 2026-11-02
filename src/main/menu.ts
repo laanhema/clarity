@@ -85,6 +85,7 @@ export function buildMenu(options: MenuOptions): Menu {
       { label: 'New', accelerator: menuAccelerator('new-file'), click: sendCommand('new-file') },
       { label: 'Open File…', accelerator: menuAccelerator('open-file'), click: sendCommand('open-file') },
       { label: 'Open Folder…', accelerator: menuAccelerator('open-folder'), click: sendCommand('open-folder') },
+      { label: 'Close Folder', accelerator: menuAccelerator('close-folder'), click: sendCommand('close-folder') },
       { label: 'Open Recent', submenu: recentSubmenu(options) },
       { type: 'separator' },
       { label: 'Save', accelerator: menuAccelerator('save'), click: sendCommand('save') },

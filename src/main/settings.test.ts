@@ -46,7 +46,13 @@ describe('recent folders', () => {
 describe('parseSettings', () => {
   it('falls back to defaults for missing, broken or foreign files', () => {
     for (const raw of ['', 'not json', '[]', 'null', '42']) {
-      expect(parseSettings(raw)).toEqual({ ui: DEFAULT_UI_SETTINGS, recentFolders: [], window: null })
+      expect(parseSettings(raw)).toEqual({
+        ui: DEFAULT_UI_SETTINGS,
+        recentFolders: [],
+        window: null,
+        lastFolder: null,
+        lastFile: null,
+      })
     }
   })
 
@@ -56,11 +62,26 @@ describe('parseSettings', () => {
         ui: { viewMode: 'preview', theme: 'purple', sidebarWidth: 5000, editorFraction: 'half' },
         recentFolders: ['/a', 'relative/b', 3, '/a', '/c'],
         window: { x: 10.4, y: 20, width: 900, height: 700, maximized: true },
+        lastFolder: '/path/to/folder',
+        lastFile: '/path/to/folder/note.md',
       }),
     )
     expect(settings.ui).toEqual({ ...DEFAULT_UI_SETTINGS, viewMode: 'preview', sidebarWidth: 600 })
     expect(settings.recentFolders).toEqual(['/a', '/c'])
     expect(settings.window).toEqual({ x: 10, y: 20, width: 900, height: 700, maximized: true })
+    expect(settings.lastFolder).toBe('/path/to/folder')
+    expect(settings.lastFile).toBe('/path/to/folder/note.md')
+  })
+
+  it('drops invalid lastFolder and lastFile paths', () => {
+    const settings = parseSettings(
+      JSON.stringify({
+        lastFolder: 'relative/path',
+        lastFile: 12345,
+      }),
+    )
+    expect(settings.lastFolder).toBeNull()
+    expect(settings.lastFile).toBeNull()
   })
 
   it('defaults to the Dark theme, and keeps a saved theme', () => {
@@ -152,6 +173,8 @@ describe('SettingsStore', () => {
       ui: { ...DEFAULT_UI_SETTINGS, viewMode: 'editor' },
       recentFolders: ['/notes'],
       window: { x: 1, y: 2, width: 800, height: 600, maximized: false },
+      lastFolder: null,
+      lastFile: null,
     })
     expect(JSON.parse(await readFile(file, 'utf8'))).toEqual(reloaded.current)
   })

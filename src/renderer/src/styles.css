@@ -362,7 +362,8 @@ samp {
   text-transform: uppercase;
 }
 
-.sidebar-open {
+.sidebar-open,
+.sidebar-close {
   flex: none;
   padding: 3px 8px;
   border: 1px solid var(--border);
@@ -371,7 +372,8 @@ samp {
   cursor: pointer;
 }
 
-.sidebar-open:hover {
+.sidebar-open:hover,
+.sidebar-close:hover {
   border-color: var(--accent);
 }
 
