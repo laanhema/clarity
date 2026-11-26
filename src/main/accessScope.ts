@@ -1,7 +1,7 @@
 import { realpath, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { imageMimeType, localImageReference } from './images'
-import { PathAccessError, isMarkdownPath, resolveInsideRoot } from './pathGuard'
+import { PathAccessError, isMarkdownPath, isWithin, resolveInsideRoot } from './pathGuard'
 
 /**
  * The set of paths the renderer may read and write.
@@ -85,6 +85,36 @@ export class AccessScope {
     const real = await resolveInsideRoot(folder, candidate)
     if (!imageMimeType(real)) throw new PathAccessError('Not an image', String(src))
     return real
+  }
+
+  /**
+   * Resolves the document an image is dropped into, which must be readable and
+   * lie inside the open folder, since a copied image is written next to it.
+   * Returns the open folder and the document's real path.
+   */
+  async resolveDropDocument(documentPath: unknown): Promise<{ folder: string; document: string }> {
+    const folder = this.#folder
+    if (!folder) throw new PathAccessError('Open a folder to drop images into its documents', String(documentPath))
+    const document = await this.resolveForRead(documentPath)
+    if (!isWithin(folder, document)) {
+      throw new PathAccessError('Images can be dropped only into a document inside the open folder', document)
+    }
+    return { folder, document }
+  }
+
+  /**
+   * Resolves where a copied image may be written: `fileName`, a plain image file
+   * name, in `folderPath`, whose real path must lie inside the open folder. The
+   * file itself is not resolved, so the caller must create it exclusively.
+   */
+  async resolveImageCopy(folderPath: string, fileName: string): Promise<string> {
+    const folder = this.#folder
+    if (!folder) throw new PathAccessError('Images are copied only into an open folder', folderPath)
+    if (fileName !== path.basename(fileName) || fileName === '..' || !imageMimeType(fileName)) {
+      throw new PathAccessError('Invalid image name', fileName)
+    }
+    const realFolder = await resolveInsideRoot(folder, folderPath)
+    return path.join(realFolder, fileName)
   }
 
   /** Resolves a path the renderer wants to read, or throws `PathAccessError`. */

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
 import {
   DEFAULT_UI_SETTINGS,
   INITIAL_THEME_SWITCH,
@@ -50,6 +50,9 @@ const api: ClarityApi = {
   closeWindow: () => ipcRenderer.send(IpcChannel.CloseWindow),
   watchDocument: (path) => invoke(IpcChannel.WatchDocument, path),
   loadImage: (documentPath, src) => invoke(IpcChannel.LoadImage, documentPath, src),
+  // The sandboxed renderer has no File.path; only the preload can ask Electron for it.
+  pathForFile: (file) => webUtils.getPathForFile(file),
+  importImage: (documentPath, imagePath) => invoke(IpcChannel.ImportImage, documentPath, imagePath),
   getInitialFile: () => invoke(IpcChannel.GetInitialFile),
   getInitialFolder: () => invoke(IpcChannel.GetInitialFolder),
   openExternal: (url) => ipcRenderer.send(IpcChannel.OpenExternal, url),

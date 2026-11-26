@@ -47,3 +47,21 @@ export function localImageReference(src: unknown): { fromRoot: boolean; relative
   const fromRoot = decoded.startsWith('/')
   return { fromRoot, relativePath: fromRoot ? decoded.replace(/^\/+/, '') : decoded }
 }
+
+/**
+ * The file name for the `attempt`-th try at copying `imageName` next to
+ * `documentPath`: `notes.md` and `photo.png` give `notes-photo.png`, then
+ * `notes-photo-2.png`, `notes-photo-3.png`…
+ */
+export function copyNameFor(documentPath: string, imageName: string, attempt: number): string {
+  const documentStem = path.basename(documentPath, path.extname(documentPath))
+  const extension = path.extname(imageName)
+  const imageStem = path.basename(imageName, extension)
+  const suffix = attempt > 1 ? `-${attempt}` : ''
+  return `${documentStem}-${imageStem}${suffix}${extension}`
+}
+
+/** The path of `target` relative to `fromFolder`, with `/` separators as a Markdown link needs. */
+export function relativeReference(fromFolder: string, target: string): string {
+  return path.relative(fromFolder, target).split(path.sep).join('/')
+}

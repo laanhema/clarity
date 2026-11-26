@@ -35,6 +35,7 @@ src/main/            Electron main process
   ipc.ts             every ipcMain.handle; validates `unknown` args, checks sender frame, size limits
   pathGuard.ts       resolveInsideRoot / isWithin: realpath-based containment checks
   accessScope.ts     which folder/files the window may read or write
+  imageImport.ts     dropped images: in-folder reference or exclusive copy next to the document
   security.ts        navigation/window-open lockdown, openExternally (http/https only)
   settings.ts        settings.json in userData, sanitizeUiPatch, lantern/mdpad migration
   watchers.ts        chokidar watchers for folder tree and open document

@@ -1,8 +1,8 @@
 import { EditorView } from '@codemirror/view'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_UI_SETTINGS, type OpenedFolder } from '../../shared/api'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { DEFAULT_UI_SETTINGS, type DroppedImage, type OpenedFolder } from '../../shared/api'
 import { App } from './App'
 import styles from './styles.css?raw'
 import { installMockApi } from './test/mockApi'
@@ -384,6 +384,156 @@ describe('preview', () => {
     expect(mock.api.loadImage).toHaveBeenCalledOnce()
     expect(within(preview()).getByText('remote')).toHaveClass('preview-image-placeholder')
     files['/notes/first.md'] = '# First'
+  })
+})
+
+/**
+ * Drops `dropped` on the editor, as files from the file manager or as dragged
+ * text, at document position `at` (jsdom has no layout to find it from the
+ * pointer).
+ */
+function dropOnEditor(dropped: { files?: File[]; text?: string }, at = 0): void {
+  const files = dropped.files ?? []
+  const event = new Event('drop', { bubbles: true, cancelable: true })
+  Object.assign(event, { clientX: 0, clientY: 0 })
+  Object.defineProperty(event, 'dataTransfer', {
+    value: {
+      files: Object.assign([...files], { item: (index: number) => files[index] ?? null }),
+      types: files.length > 0 ? ['Files'] : ['text/plain'],
+      getData: (type: string) => (type === 'Text' || type === 'text/plain' ? (dropped.text ?? '') : ''),
+    },
+  })
+  const view = editorView()
+  const position = vi.spyOn(view, 'posAtCoords').mockReturnValue(at)
+  act(() => {
+    view.contentDOM.dispatchEvent(event)
+  })
+  position.mockRestore()
+}
+
+const image = (name: string) => new File(['x'], name, { type: 'image/png' })
+
+describe('dropping images on the editor', () => {
+  beforeEach(() => {
+    mock.api.pathForFile.mockImplementation((file) => `/downloads/${file.name}`)
+    mock.api.importImage.mockImplementation((_documentPath, imagePath) =>
+      Promise.resolve({ relativePath: `img/${imagePath.slice('/downloads/'.length)}`, copiedAs: null }),
+    )
+  })
+
+  async function openFirstFile() {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: 'Open Folder' }))
+    await user.click(await screen.findByRole('button', { name: 'first.md' }))
+    await waitFor(() => expect(editorText()).toBe('# First'))
+  }
+
+  it('inserts an encoded image reference at the drop position', async () => {
+    await openFirstFile()
+    dropOnEditor({ files: [image('my photo (1).png')] })
+    await waitFor(() => expect(editorText()).toBe('![my photo (1)](img/my%20photo%20%281%29.png)\n# First'))
+    expect(mock.api.importImage).toHaveBeenCalledWith('/notes/first.md', '/downloads/my photo (1).png')
+  })
+
+  it('inserts one reference per image, each on its own line, in drop order', async () => {
+    await openFirstFile()
+    dropOnEditor({ files: [image('b.png'), image('a.png')] })
+    await waitFor(() => expect(editorText()).toBe('![b](img/b.png)\n![a](img/a.png)\n# First'))
+  })
+
+  it('puts the references on lines of their own when dropped inside or at the end of a line', async () => {
+    await openFirstFile()
+    dropOnEditor({ files: [image('b.png'), image('a.png')] }, 3)
+    await waitFor(() => expect(editorText()).toBe('# F\n![b](img/b.png)\n![a](img/a.png)\nirst'))
+    dropOnEditor({ files: [image('c.png')] }, editorText().length)
+    await waitFor(() => expect(editorText()).toBe('# F\n![b](img/b.png)\n![a](img/a.png)\nirst\n![c](img/c.png)'))
+  })
+
+  it('moves the drop position with text typed while the image is prepared', async () => {
+    let finish: (image: DroppedImage) => void = () => undefined
+    mock.api.importImage.mockReturnValue(new Promise((resolve) => (finish = resolve)))
+    await openFirstFile()
+    dropOnEditor({ files: [image('photo.png')] }, '# First'.length)
+    act(() => editorView().dispatch({ changes: { from: 0, insert: 'Intro\n' }, userEvent: 'input.type' }))
+    act(() => finish({ relativePath: 'img/photo.png', copiedAs: null }))
+    await waitFor(() => expect(editorText()).toBe('Intro\n# First\n![photo](img/photo.png)'))
+  })
+
+  it('names the copy left behind when another document was opened meanwhile', async () => {
+    let finish: (image: DroppedImage) => void = () => undefined
+    mock.api.importImage.mockReturnValue(new Promise((resolve) => (finish = resolve)))
+    const user = userEvent.setup()
+    await openFirstFile()
+    dropOnEditor({ files: [image('photo.png')] })
+    await user.click(screen.getByRole('button', { name: 'second.md' }))
+    await waitFor(() => expect(editorText()).toBe('# Second'))
+    act(() => finish({ relativePath: 'first-photo.png', copiedAs: 'first-photo.png' }))
+    expect(
+      await screen.findByText(
+        'first.md was closed before the dropped images went in, so no document references the copies left in its folder: first-photo.png',
+      ),
+    ).toBeInTheDocument()
+    expect(editorText()).toBe('# Second')
+  })
+
+  it('says which images were copied next to the document', async () => {
+    mock.api.importImage.mockResolvedValue({ relativePath: 'first-photo.png', copiedAs: 'first-photo.png' })
+    await openFirstFile()
+    dropOnEditor({ files: [image('photo.png')] })
+    await waitFor(() => expect(editorText()).toBe('![first-photo](first-photo.png)\n# First'))
+    expect(screen.getByText("Copied into the document's folder: first-photo.png")).toBeInTheDocument()
+  })
+
+  it('says both why a file was left out and which images were copied', async () => {
+    mock.api.importImage.mockImplementation((_documentPath, imagePath) =>
+      imagePath.endsWith('.txt')
+        ? Promise.reject(new Error('notes.txt is not an image'))
+        : Promise.resolve({ relativePath: 'first-photo.png', copiedAs: 'first-photo.png' }),
+    )
+    await openFirstFile()
+    dropOnEditor({ files: [new File(['text'], 'notes.txt'), image('photo.png')] })
+    expect(
+      await screen.findByText("notes.txt is not an image. Copied into the document's folder: first-photo.png"),
+    ).toBeInTheDocument()
+    expect(editorText()).toBe('![first-photo](first-photo.png)\n# First')
+  })
+
+  it('inserts nothing for a refused file and says why', async () => {
+    mock.api.importImage.mockRejectedValue(
+      new Error("Error invoking remote method 'clarity:import-image': PathAccessError: notes.txt is not an image"),
+    )
+    await openFirstFile()
+    dropOnEditor({ files: [new File(['text'], 'notes.txt')] })
+    expect(await screen.findByText('notes.txt is not an image.')).toBeInTheDocument()
+    expect(editorText()).toBe('# First')
+  })
+
+  it('inserts nothing into an unsaved document', async () => {
+    mock.api.getInitialFolder.mockResolvedValue(folder)
+    render(<App />)
+    await screen.findByRole('button', { name: 'first.md' })
+    dropOnEditor({ files: [image('photo.png')] })
+    expect(await screen.findByText('Save the document before dropping images into it.')).toBeInTheDocument()
+    expect(editorText()).toBe('')
+    expect(mock.api.importImage).not.toHaveBeenCalled()
+  })
+
+  it('inserts nothing when no folder is open', async () => {
+    mock.api.getInitialFile.mockResolvedValue('/notes/first.md')
+    render(<App />)
+    await waitFor(() => expect(editorText()).toBe('# First'))
+    dropOnEditor({ files: [image('photo.png')] })
+    expect(await screen.findByText('Open a folder to drop images into its documents.')).toBeInTheDocument()
+    expect(editorText()).toBe('# First')
+    expect(mock.api.importImage).not.toHaveBeenCalled()
+  })
+
+  it('leaves dragged text to the editor', async () => {
+    await openFirstFile()
+    dropOnEditor({ text: 'moved ' })
+    expect(editorText()).toBe('moved # First')
+    expect(mock.api.pathForFile).not.toHaveBeenCalled()
   })
 })
 

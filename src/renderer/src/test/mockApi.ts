@@ -49,6 +49,8 @@ export function installMockApi() {
     closeWindow: vi.fn<ClarityApi['closeWindow']>(),
     watchDocument: vi.fn<ClarityApi['watchDocument']>().mockResolvedValue(undefined),
     loadImage: vi.fn<ClarityApi['loadImage']>().mockResolvedValue(null),
+    pathForFile: vi.fn<ClarityApi['pathForFile']>().mockReturnValue(''),
+    importImage: vi.fn<ClarityApi['importImage']>().mockRejectedValue(new Error('No image was expected')),
     getInitialFile: vi.fn<ClarityApi['getInitialFile']>().mockResolvedValue(null),
     getInitialFolder: vi.fn<ClarityApi['getInitialFolder']>().mockResolvedValue(null),
     openExternal: vi.fn<ClarityApi['openExternal']>(),

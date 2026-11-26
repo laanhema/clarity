@@ -101,6 +101,14 @@ export interface UiSettings {
   fontSize: number
 }
 
+/** An image dropped on the editor, ready to be referenced from the document. */
+export interface DroppedImage {
+  /** The image's path relative to the document's folder, with `/` separators and not yet URL-encoded. */
+  relativePath: string
+  /** The file name of the copy made next to the document, or null when the image was already inside the open folder. */
+  copiedAs: string | null
+}
+
 export const DEFAULT_UI_SETTINGS: UiSettings = {
   viewMode: 'split',
   theme: 'dark',
@@ -154,6 +162,16 @@ export interface ClarityApi {
    * Only images inside the open folder load; anything else resolves to null.
    */
   loadImage(documentPath: string, src: string): Promise<string | null>
+  /** The path on disk of a file dropped from outside the window, or an empty string when it has none. */
+  pathForFile(file: File): string
+  /**
+   * Prepares an image file dropped on the editor for `documentPath`, which must
+   * lie inside the open folder. An image inside the open folder is used where
+   * it is; one from elsewhere is copied next to the document first, under a new
+   * name that never replaces an existing file. Rejects anything that is not an
+   * image file Clarity shows, or is larger than the image size limit.
+   */
+  importImage(documentPath: string, imagePath: string): Promise<DroppedImage>
   /** The path of the Markdown file requested on launch, if any. */
   getInitialFile(): Promise<string | null>
   /** The folder restored on launch, if any. */
@@ -193,6 +211,7 @@ export const IpcChannel = {
   CloseWindow: 'clarity:close-window',
   WatchDocument: 'clarity:watch-document',
   LoadImage: 'clarity:load-image',
+  ImportImage: 'clarity:import-image',
   GetInitialFile: 'clarity:get-initial-file',
   GetInitialFolder: 'clarity:get-initial-folder',
   OpenExternal: 'clarity:open-external',

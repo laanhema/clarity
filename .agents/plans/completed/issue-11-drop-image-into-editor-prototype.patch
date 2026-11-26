@@ -1,0 +1,771 @@
+diff --git a/README.md b/README.md
+index 51f16e9..7cd3aaf 100644
+--- a/README.md
++++ b/README.md
+@@ -14,6 +14,7 @@ Open a folder, pick a Markdown file from the sidebar, and edit it with a live pr
+ - **Themes**: Dark by default; follow the system, or pick Light, Gruvbox Material Dark Hard or Tokyo Night Moon from **View → Theme** or the button in the status bar. The editor, preview and code colours all follow the choice, and Clarity remembers it.
+ - **Links in the preview**: web links (http and https) open in your browser. Links to other `.md` files inside the open folder open in Clarity. `#anchors` jump within the preview, including footnotes. All other links do nothing.
+ - **Images in the preview**: images with a relative path load if they are inside the open folder (png, jpg, gif, webp, avif, svg, bmp, ico, up to 15 MB). Remote images are not loaded; their alt text shows instead.
++- **Dropping images**: drop image files from the file manager onto the editor to insert a Markdown image reference (`![photo](img/photo.png)`) where you drop them, one line per image. The path is relative to the document, and spaces, parentheses and other special characters are encoded. An image inside the open folder is used where it is. An image from elsewhere is first copied into the document's folder, named after the document: dropping `photo.png` into `notes.md` makes `notes-photo.png`, or `notes-photo-2.png` if that name is taken, so no file is ever replaced. Images over 15 MB, files that are not images, and drops into an unsaved document or while no folder is open insert nothing, and the status bar says why.
+ - **Files**: the sidebar lists the `.md` and `.markdown` files in the open folder and its subfolders. It includes hidden folders such as `.github` that contain Markdown, but skips `.git` and `node_modules`. It updates when files are added or removed. A dot (●) marks unsaved changes. Opening a different folder closes the open file. You can close the open folder with **File → Close Folder** (Ctrl+Alt+W, or Cmd+Alt+W on macOS) or the **Close** button in the sidebar header. Before you switch files or folders, close the folder, or close the window, with unsaved changes, Clarity asks whether to save, discard or cancel. When launched without arguments, Clarity automatically reopens the folder and Markdown file open at last quit; if the saved folder or file no longer exists or is inaccessible, Clarity starts gracefully with an empty workspace. Launching Clarity with an explicit file argument on the command line (e.g. `clarity notes.md`) or via a file manager's **Open with** opens that specific file instead. It maintains a single instance: opening another file while Clarity is running hands it to the existing window, prompting first if you have unsaved changes.
+ - **Changes from other programs**: if another program changes the open file and you have no unsaved edits, Clarity reloads it. If you do have unsaved edits, it asks whether to reload or keep yours. If the file is deleted, the document is marked unsaved so you can save it again.
+ - **Open Recent**: **File → Open Recent** lists the last ten folders. Folders that no longer exist are dropped.
+@@ -98,7 +99,7 @@ build/          Packaging resources (the app icon)
+ Clarity shows untrusted documents, so the renderer is locked down:
+ 
+ - The renderer runs sandboxed, with context isolation and without Node.js. It reaches the disk only through the small typed API in `src/preload/index.ts`.
+-- The main process only reads and writes inside the folder or files you picked in a native dialog, opened from Open Recent, or passed on the command line / Open With. It resolves real paths, so `../` tricks and symlinks that point outside the folder are rejected. Opening a different folder drops access to the old one, including its open document.
++- The main process only reads and writes inside the folder or files you picked in a native dialog, opened from Open Recent, or passed on the command line / Open With. It resolves real paths, so `../` tricks and symlinks that point outside the folder are rejected. The one exception is an image file you drop on the editor: Clarity reads it only to copy it into the open folder, and only if it is a regular image file of at most 15 MB. Opening a different folder drops access to the old one, including its open document.
+ - Markdown is turned into HTML with remark and rehype, and the result is sanitized with GitHub's rules (rehype-sanitize) before anything else touches it. Scripts, event handlers, `javascript:` and other non-web URLs, iframes, forms, `<style>` and `style` attributes are removed. Code highlighting and math run after sanitizing. Each builds its own markup from the code's or formula's text, so its colour and size styles never come from the document. KaTeX runs with `trust` off, so `\href`, `\includegraphics` and the `\html…` commands produce no links, images or attributes.
+ - Mermaid runs with `securityLevel: 'strict'`, and a diagram's `%%{init}%%` block cannot change that, inject CSS or change the font. Clarity then removes any script, event handler, animation and non-`#` URL from the SVG and shows it inside a shadow root, so its styles reach nothing else. The preview is rendered as React elements, not with `innerHTML`.
+ - A strict Content-Security-Policy allows only the app's own scripts and styles, and images from the app or `data:` URLs. Images inside the open folder reach the preview as `data:` URLs from the main process. The dev server relaxes the policy just enough for hot reload. The editor runs inside a shadow root, so its runtime styles need no `unsafe-inline`. Mermaid diagrams get their styles the same way, as constructed stylesheets.
+diff --git a/src/main/accessScope.ts b/src/main/accessScope.ts
+index aab395b..5c1047e 100644
+--- a/src/main/accessScope.ts
++++ b/src/main/accessScope.ts
+@@ -1,7 +1,7 @@
+ import { realpath, stat } from 'node:fs/promises'
+ import path from 'node:path'
+ import { imageMimeType, localImageReference } from './images'
+-import { PathAccessError, isMarkdownPath, resolveInsideRoot } from './pathGuard'
++import { PathAccessError, isMarkdownPath, isWithin, resolveInsideRoot } from './pathGuard'
+ 
+ /**
+  * The set of paths the renderer may read and write.
+@@ -87,6 +87,36 @@ export class AccessScope {
+     return real
+   }
+ 
++  /**
++   * Resolves the document an image is dropped into, which must be readable and
++   * lie inside the open folder, since a copied image is written next to it.
++   * Returns the open folder and the document's real path.
++   */
++  async resolveDropDocument(documentPath: unknown): Promise<{ folder: string; document: string }> {
++    const folder = this.#folder
++    if (!folder) throw new PathAccessError('Open a folder to drop images into its documents', String(documentPath))
++    const document = await this.resolveForRead(documentPath)
++    if (!isWithin(folder, document)) {
++      throw new PathAccessError('Images can be dropped only into a document inside the open folder', document)
++    }
++    return { folder, document }
++  }
++
++  /**
++   * Resolves where a copied image may be written: `fileName`, a plain image file
++   * name, in `folderPath`, whose real path must lie inside the open folder. The
++   * file itself is not resolved, so the caller must create it exclusively.
++   */
++  async resolveImageCopy(folderPath: string, fileName: string): Promise<string> {
++    const folder = this.#folder
++    if (!folder) throw new PathAccessError('Images are copied only into an open folder', folderPath)
++    if (fileName !== path.basename(fileName) || fileName === '..' || !imageMimeType(fileName)) {
++      throw new PathAccessError('Invalid image name', fileName)
++    }
++    const realFolder = await resolveInsideRoot(folder, folderPath)
++    return path.join(realFolder, fileName)
++  }
++
+   /** Resolves a path the renderer wants to read, or throws `PathAccessError`. */
+   async resolveForRead(requested: unknown): Promise<string> {
+     return this.#resolve(requested, false)
+diff --git a/src/main/imageImport.test.ts b/src/main/imageImport.test.ts
+new file mode 100644
+index 0000000..77be621
+--- /dev/null
++++ b/src/main/imageImport.test.ts
+@@ -0,0 +1,96 @@
++import { readFile, readdir, truncate } from 'node:fs/promises'
++import path from 'node:path'
++import { afterEach, beforeEach, describe, expect, it } from 'vitest'
++import { AccessScope } from './accessScope'
++import { importImage } from './imageImport'
++import { MAX_IMAGE_BYTES } from './images'
++import { PathAccessError } from './pathGuard'
++import { linkAt, makeTempDir, removeDir, writeAt } from './testFs'
++
++describe('importImage', () => {
++  let workspace: string
++  let folder: string
++  let document: string
++  let outside: string
++  let scope: AccessScope
++
++  beforeEach(async () => {
++    workspace = await makeTempDir()
++    folder = path.join(workspace, 'notes')
++    document = await writeAt(folder, 'journal/notes.md', '# Notes')
++    await writeAt(folder, 'img/inside.png', 'inside')
++    outside = await writeAt(workspace, 'downloads/photo.png', 'photo')
++    scope = new AccessScope()
++    await scope.grantFolder(folder)
++  })
++
++  afterEach(() => removeDir(workspace))
++
++  it('references an image inside the open folder where it is, relative to the document', async () => {
++    await expect(importImage(scope, document, path.join(folder, 'img', 'inside.png'))).resolves.toEqual({
++      relativePath: '../img/inside.png',
++      copiedAs: null,
++    })
++    expect(await readdir(path.dirname(document))).toEqual(['notes.md'])
++  })
++
++  it('copies an image from outside next to the document under the document name', async () => {
++    await expect(importImage(scope, document, outside)).resolves.toEqual({
++      relativePath: 'notes-photo.png',
++      copiedAs: 'notes-photo.png',
++    })
++    expect(await readFile(path.join(folder, 'journal', 'notes-photo.png'), 'utf8')).toBe('photo')
++  })
++
++  it('numbers the copy on a name clash and never overwrites', async () => {
++    await writeAt(folder, 'journal/notes-photo.png', 'existing')
++    await expect(importImage(scope, document, outside)).resolves.toMatchObject({ copiedAs: 'notes-photo-2.png' })
++    await expect(importImage(scope, document, outside)).resolves.toMatchObject({ copiedAs: 'notes-photo-3.png' })
++    expect(await readFile(path.join(folder, 'journal', 'notes-photo.png'), 'utf8')).toBe('existing')
++  })
++
++  it('does not write through a link that holds the copy name', async () => {
++    const target = await writeAt(workspace, 'secret.png', 'secret')
++    await linkAt(folder, 'journal/notes-photo.png', target)
++    await expect(importImage(scope, document, outside)).resolves.toMatchObject({ copiedAs: 'notes-photo-2.png' })
++    expect(await readFile(target, 'utf8')).toBe('secret')
++  })
++
++  it('copies an image that a link inside the folder points to from outside', async () => {
++    const link = await linkAt(folder, 'img/linked.png', outside)
++    await expect(importImage(scope, document, link)).resolves.toMatchObject({ copiedAs: 'notes-linked.png' })
++  })
++
++  it('refuses an image over the size limit and writes nothing', async () => {
++    const big = await writeAt(workspace, 'downloads/big.png')
++    await truncate(big, MAX_IMAGE_BYTES + 1)
++    await expect(importImage(scope, document, big)).rejects.toThrow('big.png is larger than the 15 MB image limit')
++    expect(await readdir(path.dirname(document))).toEqual(['notes.md'])
++  })
++
++  it('refuses files that are not images, and folders named like images', async () => {
++    const text = await writeAt(workspace, 'downloads/readme.txt', 'text')
++    await expect(importImage(scope, document, text)).rejects.toThrow('readme.txt is not an image')
++    const disguised = await linkAt(workspace, 'downloads/disguised.png', text)
++    await expect(importImage(scope, document, disguised)).rejects.toThrow('disguised.png is not an image')
++    await writeAt(workspace, 'downloads/folder.png/inner.txt')
++    await expect(importImage(scope, document, path.join(workspace, 'downloads', 'folder.png'))).rejects.toThrow(
++      'folder.png is not a file',
++    )
++  })
++
++  it('refuses relative or invalid image paths', async () => {
++    for (const imagePath of ['photo.png', '', 42, null, `${outside}\0`]) {
++      await expect(importImage(scope, document, imagePath)).rejects.toBeInstanceOf(PathAccessError)
++    }
++  })
++
++  it('refuses when no folder is open or the document lies outside it', async () => {
++    const single = await writeAt(workspace, 'elsewhere/single.md', 'single')
++    await scope.grantFile(single)
++    await expect(importImage(scope, single, outside)).rejects.toBeInstanceOf(PathAccessError)
++    scope.dropFolder()
++    await expect(importImage(scope, document, outside)).rejects.toThrow('Open a folder')
++    await expect(importImage(scope, single, outside)).rejects.toBeInstanceOf(PathAccessError)
++  })
++})
+diff --git a/src/main/imageImport.ts b/src/main/imageImport.ts
+new file mode 100644
+index 0000000..6c2975e
+--- /dev/null
++++ b/src/main/imageImport.ts
+@@ -0,0 +1,71 @@
++import { constants } from 'node:fs'
++import { open, realpath, stat, writeFile } from 'node:fs/promises'
++import path from 'node:path'
++import type { DroppedImage } from '../shared/api'
++import type { AccessScope } from './accessScope'
++import { MAX_IMAGE_BYTES, copyNameFor, imageMimeType, relativeReference } from './images'
++import { PathAccessError, isWithin } from './pathGuard'
++
++/** How many numbered names a copy tries before giving up. */
++const MAX_COPY_ATTEMPTS = 1000
++
++const SIZE_LIMIT = `${MAX_IMAGE_BYTES / (1024 * 1024)} MB`
++
++function isAlreadyThere(error: unknown): boolean {
++  return error instanceof Error && 'code' in error && error.code === 'EEXIST'
++}
++
++/**
++ * Reads a dropped image from outside the open folder. The path comes from the
++ * user's drop, not from a grant, so only a regular image file within the size
++ * limit is read; the checks run again on the open handle, so the file cannot be
++ * swapped for another between the check and the read.
++ */
++async function readDroppedImage(imagePath: string, name: string): Promise<Buffer> {
++  // O_NONBLOCK keeps a FIFO renamed to `.png` from blocking the open.
++  const handle = await open(imagePath, constants.O_RDONLY | constants.O_NONBLOCK)
++  try {
++    const info = await handle.stat()
++    if (!info.isFile()) throw new PathAccessError(`${name} is not a file`, imagePath)
++    if (info.size > MAX_IMAGE_BYTES) throw new PathAccessError(`${name} is larger than the ${SIZE_LIMIT} image limit`, imagePath)
++    return await handle.readFile()
++  } finally {
++    await handle.close()
++  }
++}
++
++/**
++ * Prepares an image file dropped on the editor for the open document. An image
++ * whose real path lies inside the open folder is referenced where it is; any
++ * other is copied next to the document as `<document name>-<image name>`, with
++ * `-2`, `-3`… added until the name is free. A copy never replaces a file.
++ */
++export async function importImage(scope: AccessScope, documentPath: unknown, imagePath: unknown): Promise<DroppedImage> {
++  const { folder, document } = await scope.resolveDropDocument(documentPath)
++  if (typeof imagePath !== 'string' || !path.isAbsolute(imagePath) || imagePath.includes('\0')) {
++    throw new PathAccessError('Invalid image path', String(imagePath))
++  }
++  const name = path.basename(imagePath)
++  const real = await realpath(imagePath)
++  if (!imageMimeType(name) || !imageMimeType(real)) throw new PathAccessError(`${name} is not an image`, imagePath)
++  const info = await stat(real)
++  if (!info.isFile()) throw new PathAccessError(`${name} is not a file`, imagePath)
++  if (info.size > MAX_IMAGE_BYTES) throw new PathAccessError(`${name} is larger than the ${SIZE_LIMIT} image limit`, imagePath)
++
++  const documentFolder = path.dirname(document)
++  if (isWithin(folder, real)) return { relativePath: relativeReference(documentFolder, real), copiedAs: null }
++
++  const data = await readDroppedImage(real, name)
++  for (let attempt = 1; attempt <= MAX_COPY_ATTEMPTS; attempt++) {
++    const target = await scope.resolveImageCopy(documentFolder, copyNameFor(document, name, attempt))
++    try {
++      // 'wx' creates the file exclusively: it fails on any existing file or link.
++      await writeFile(target, data, { flag: 'wx' })
++    } catch (error) {
++      if (isAlreadyThere(error)) continue
++      throw error
++    }
++    return { relativePath: relativeReference(documentFolder, target), copiedAs: path.basename(target) }
++  }
++  throw new PathAccessError(`No free name for a copy of ${name}`, imagePath)
++}
+diff --git a/src/main/images.test.ts b/src/main/images.test.ts
+new file mode 100644
+index 0000000..1c6f7d4
+--- /dev/null
++++ b/src/main/images.test.ts
+@@ -0,0 +1,30 @@
++import { describe, expect, it } from 'vitest'
++import { copyNameFor, localImageReference, relativeReference } from './images'
++
++describe('copyNameFor', () => {
++  it('puts the document name in front of the image name', () => {
++    expect(copyNameFor('/notes/notes.md', 'photo.png', 1)).toBe('notes-photo.png')
++    expect(copyNameFor('/notes/Trip Report.markdown', 'IMG 0001.JPG', 1)).toBe('Trip Report-IMG 0001.JPG')
++  })
++
++  it('numbers later attempts before the extension', () => {
++    expect(copyNameFor('/notes/notes.md', 'photo.png', 2)).toBe('notes-photo-2.png')
++    expect(copyNameFor('/notes/notes.md', 'photo.png', 3)).toBe('notes-photo-3.png')
++    expect(copyNameFor('/notes/notes.md', 'archive.tar.svg', 2)).toBe('notes-archive.tar-2.svg')
++  })
++})
++
++describe('relativeReference', () => {
++  it('is relative to the document folder, with forward slashes', () => {
++    expect(relativeReference('/notes', '/notes/photo.png')).toBe('photo.png')
++    expect(relativeReference('/notes', '/notes/img/deep/photo.png')).toBe('img/deep/photo.png')
++    expect(relativeReference('/notes/journal/2026', '/notes/img/photo.png')).toBe('../../img/photo.png')
++  })
++})
++
++describe('localImageReference', () => {
++  it('decodes the encoded paths that a dropped image inserts', () => {
++    expect(localImageReference('my%20photo%20%281%29.png').relativePath).toBe('my photo (1).png')
++    expect(localImageReference('../img/%C3%A4%23%3F.png').relativePath).toBe('../img/ä#?.png')
++  })
++})
+diff --git a/src/main/images.ts b/src/main/images.ts
+index 961e073..8912d78 100644
+--- a/src/main/images.ts
++++ b/src/main/images.ts
+@@ -47,3 +47,21 @@ export function localImageReference(src: unknown): { fromRoot: boolean; relative
+   const fromRoot = decoded.startsWith('/')
+   return { fromRoot, relativePath: fromRoot ? decoded.replace(/^\/+/, '') : decoded }
+ }
++
++/**
++ * The file name for the `attempt`-th try at copying `imageName` next to
++ * `documentPath`: `notes.md` and `photo.png` give `notes-photo.png`, then
++ * `notes-photo-2.png`, `notes-photo-3.png`…
++ */
++export function copyNameFor(documentPath: string, imageName: string, attempt: number): string {
++  const documentStem = path.basename(documentPath, path.extname(documentPath))
++  const extension = path.extname(imageName)
++  const imageStem = path.basename(imageName, extension)
++  const suffix = attempt > 1 ? `-${attempt}` : ''
++  return `${documentStem}-${imageStem}${suffix}${extension}`
++}
++
++/** The path of `target` relative to `fromFolder`, with `/` separators as a Markdown link needs. */
++export function relativeReference(fromFolder: string, target: string): string {
++  return path.relative(fromFolder, target).split(path.sep).join('/')
++}
+diff --git a/src/main/ipc.ts b/src/main/ipc.ts
+index 7c1fab8..369ec02 100644
+--- a/src/main/ipc.ts
++++ b/src/main/ipc.ts
+@@ -11,6 +11,7 @@ import {
+   type UnsavedChoice,
+ } from '../shared/api'
+ import { listMarkdownTree } from './fileTree'
++import { importImage } from './imageImport'
+ import { MAX_IMAGE_BYTES, imageMimeType } from './images'
+ import { isMarkdownPath } from './pathGuard'
+ import { openExternally } from './security'
+@@ -365,6 +366,10 @@ export function registerIpcHandlers(settings: SettingsStore): void {
+     loadImage(senderState(event), documentPath, src),
+   )
+ 
++  ipcMain.handle(IpcChannel.ImportImage, (event, documentPath: unknown, imagePath: unknown) =>
++    importImage(senderState(event).scope, documentPath, imagePath),
++  )
++
+   ipcMain.handle(IpcChannel.GetInitialFolder, async (event): Promise<OpenedFolder | null> => {
+     const state = senderState(event)
+     if (!state.initialFolder) return null
+diff --git a/src/preload/index.ts b/src/preload/index.ts
+index e2811e8..0bd1404 100644
+--- a/src/preload/index.ts
++++ b/src/preload/index.ts
+@@ -1,4 +1,4 @@
+-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
++import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron'
+ import {
+   DEFAULT_UI_SETTINGS,
+   INITIAL_THEME_SWITCH,
+@@ -50,6 +50,9 @@ const api: ClarityApi = {
+   closeWindow: () => ipcRenderer.send(IpcChannel.CloseWindow),
+   watchDocument: (path) => invoke(IpcChannel.WatchDocument, path),
+   loadImage: (documentPath, src) => invoke(IpcChannel.LoadImage, documentPath, src),
++  // The sandboxed renderer has no File.path; only the preload can ask Electron for it.
++  pathForFile: (file) => webUtils.getPathForFile(file),
++  importImage: (documentPath, imagePath) => invoke(IpcChannel.ImportImage, documentPath, imagePath),
+   getInitialFile: () => invoke(IpcChannel.GetInitialFile),
+   getInitialFolder: () => invoke(IpcChannel.GetInitialFolder),
+   openExternal: (url) => ipcRenderer.send(IpcChannel.OpenExternal, url),
+diff --git a/src/renderer/src/App.test.tsx b/src/renderer/src/App.test.tsx
+index 28bedf1..118705f 100644
+--- a/src/renderer/src/App.test.tsx
++++ b/src/renderer/src/App.test.tsx
+@@ -387,6 +387,100 @@ describe('preview', () => {
+   })
+ })
+ 
++/** Drops `dropped` on the editor, as files from the file manager or as dragged text. */
++function dropOnEditor(dropped: { files?: File[]; text?: string }): void {
++  const files = dropped.files ?? []
++  const event = new Event('drop', { bubbles: true, cancelable: true })
++  Object.assign(event, { clientX: 0, clientY: 0 })
++  Object.defineProperty(event, 'dataTransfer', {
++    value: {
++      files: Object.assign([...files], { item: (index: number) => files[index] ?? null }),
++      types: files.length > 0 ? ['Files'] : ['text/plain'],
++      getData: (type: string) => (type === 'Text' || type === 'text/plain' ? (dropped.text ?? '') : ''),
++    },
++  })
++  act(() => {
++    editorView().contentDOM.dispatchEvent(event)
++  })
++}
++
++const image = (name: string) => new File(['x'], name, { type: 'image/png' })
++
++describe('dropping images on the editor', () => {
++  beforeEach(() => {
++    mock.api.pathForFile.mockImplementation((file) => `/downloads/${file.name}`)
++    mock.api.importImage.mockImplementation((_documentPath, imagePath) =>
++      Promise.resolve({ relativePath: `img/${imagePath.slice('/downloads/'.length)}`, copiedAs: null }),
++    )
++  })
++
++  async function openFirstFile() {
++    const user = userEvent.setup()
++    render(<App />)
++    await user.click(screen.getByRole('button', { name: 'Open Folder' }))
++    await user.click(await screen.findByRole('button', { name: 'first.md' }))
++    await waitFor(() => expect(editorText()).toBe('# First'))
++  }
++
++  it('inserts an encoded image reference at the drop position', async () => {
++    await openFirstFile()
++    dropOnEditor({ files: [image('my photo (1).png')] })
++    await waitFor(() => expect(editorText()).toBe('![my photo (1)](img/my%20photo%20%281%29.png)# First'))
++    expect(mock.api.importImage).toHaveBeenCalledWith('/notes/first.md', '/downloads/my photo (1).png')
++  })
++
++  it('inserts one reference per image, each on its own line, in drop order', async () => {
++    await openFirstFile()
++    dropOnEditor({ files: [image('b.png'), image('a.png')] })
++    await waitFor(() => expect(editorText()).toBe('![b](img/b.png)\n![a](img/a.png)# First'))
++  })
++
++  it('says which images were copied next to the document', async () => {
++    mock.api.importImage.mockResolvedValue({ relativePath: 'first-photo.png', copiedAs: 'first-photo.png' })
++    await openFirstFile()
++    dropOnEditor({ files: [image('photo.png')] })
++    await waitFor(() => expect(editorText()).toBe('![first-photo](first-photo.png)# First'))
++    expect(screen.getByText("Copied into the document's folder: first-photo.png")).toBeInTheDocument()
++  })
++
++  it('inserts nothing for a refused file and says why', async () => {
++    mock.api.importImage.mockRejectedValue(
++      new Error("Error invoking remote method 'clarity:import-image': PathAccessError: notes.txt is not an image"),
++    )
++    await openFirstFile()
++    dropOnEditor({ files: [new File(['text'], 'notes.txt')] })
++    expect(await screen.findByText('notes.txt is not an image.')).toBeInTheDocument()
++    expect(editorText()).toBe('# First')
++  })
++
++  it('inserts nothing into an unsaved document', async () => {
++    mock.api.getInitialFolder.mockResolvedValue(folder)
++    render(<App />)
++    await screen.findByRole('button', { name: 'first.md' })
++    dropOnEditor({ files: [image('photo.png')] })
++    expect(await screen.findByText('Save the document before dropping images into it.')).toBeInTheDocument()
++    expect(editorText()).toBe('')
++    expect(mock.api.importImage).not.toHaveBeenCalled()
++  })
++
++  it('inserts nothing when no folder is open', async () => {
++    mock.api.getInitialFile.mockResolvedValue('/notes/first.md')
++    render(<App />)
++    await waitFor(() => expect(editorText()).toBe('# First'))
++    dropOnEditor({ files: [image('photo.png')] })
++    expect(await screen.findByText('Open a folder to drop images into its documents.')).toBeInTheDocument()
++    expect(editorText()).toBe('# First')
++    expect(mock.api.importImage).not.toHaveBeenCalled()
++  })
++
++  it('leaves dragged text to the editor', async () => {
++    await openFirstFile()
++    dropOnEditor({ text: 'moved ' })
++    expect(editorText()).toBe('moved # First')
++    expect(mock.api.pathForFile).not.toHaveBeenCalled()
++  })
++})
++
+ describe('view modes and settings', () => {
+   // Hidden elements have no accessible name, so find the panes by their label attribute.
+   const pane = (label: string) => {
+diff --git a/src/renderer/src/App.tsx b/src/renderer/src/App.tsx
+index 59395c1..ff70441 100644
+--- a/src/renderer/src/App.tsx
++++ b/src/renderer/src/App.tsx
+@@ -15,6 +15,7 @@ import { Sidebar } from './components/Sidebar'
+ import { Splitter } from './components/Splitter'
+ import { StatusBar } from './components/StatusBar'
+ import { decideExternalChange } from './externalChange'
++import { markdownImage } from './imageDrop'
+ import { useScrollSync } from './scrollSync/useScrollSync'
+ import { countWords, errorMessage, fileName } from './text'
+ import { useTokenEstimate } from './useTokenEstimate'
+@@ -273,6 +274,44 @@ export function App() {
+     setTimeout(() => editor.current?.openSearch(), 0)
+   }
+ 
++  /**
++   * Turns image files dropped on the editor into Markdown image references,
++   * one per line in drop order. The status bar says why a file was left out,
++   * or which images were copied next to the document.
++   */
++  async function dropImages(files: File[]): Promise<string | null> {
++    setMessage(null)
++    if (!folder) {
++      setMessage('Open a folder to drop images into its documents.')
++      return null
++    }
++    const documentPath = doc.path
++    if (!documentPath) {
++      setMessage('Save the document before dropping images into it.')
++      return null
++    }
++    const references: string[] = []
++    const copies: string[] = []
++    const problems: string[] = []
++    for (const file of files) {
++      const imagePath = api.pathForFile(file)
++      if (!imagePath) {
++        problems.push(`${file.name} is not a file on disk.`)
++        continue
++      }
++      try {
++        const image = await api.importImage(documentPath, imagePath)
++        references.push(markdownImage(image.relativePath))
++        if (image.copiedAs) copies.push(image.copiedAs)
++      } catch (error) {
++        problems.push(`${errorMessage(error)}.`)
++      }
++    }
++    if (problems.length > 0) setMessage(problems.join(' '))
++    else if (copies.length > 0) setMessage(`Copied into the document's folder: ${copies.join(', ')}`)
++    return references.length > 0 ? references.join('\n') : null
++  }
++
+   /** Brings the document in line with a file that another program changed. */
+   async function reconcileWithDisk(path: string): Promise<void> {
+     if (latestDoc.current.path !== path) return
+@@ -425,6 +464,7 @@ export function App() {
+           hidden={!showEditor}
+           column={viewMode === 'editor'}
+           onChange={(content) => setDoc((current) => ({ ...current, content }))}
++          onDropFiles={dropImages}
+         />
+         {viewMode === 'split' && (
+           <Splitter
+diff --git a/src/renderer/src/components/Editor.tsx b/src/renderer/src/components/Editor.tsx
+index 3e89dad..087ea16 100644
+--- a/src/renderer/src/components/Editor.tsx
++++ b/src/renderer/src/components/Editor.tsx
+@@ -31,6 +31,12 @@ export interface EditorProps {
+   hidden?: boolean
+   /** Lays the text out in the preview's centred column, for editor-only view. */
+   column?: boolean
++  /**
++   * Called when files are dropped on the editor, in drop order. Resolves to the
++   * text to insert at the drop position, or null to insert nothing. Without it,
++   * a file drop inserts nothing.
++   */
++  onDropFiles?: (files: File[]) => Promise<string | null>
+   ref?: Ref<EditorHandle>
+ }
+ 
+@@ -93,9 +99,32 @@ const editorTheme = EditorView.theme({
+ interface StateCallbacks {
+   onDocChanged: (value: string) => void
+   onPaneChange: (change: PaneChange) => void
++  onDropFiles: (files: File[], position: number) => void
++}
++
++/**
++ * Takes file drops away from CodeMirror, which would insert a text file's
++ * contents. Dragged text has no files and stays with CodeMirror.
++ */
++function fileDropHandlers(onDropFiles: StateCallbacks['onDropFiles']): Extension {
++  return EditorView.domEventHandlers({
++    dragover(event) {
++      if (!event.dataTransfer?.types.includes('Files')) return false
++      event.preventDefault()
++      event.dataTransfer.dropEffect = 'copy'
++      return false
++    },
++    drop(event, view) {
++      const files = event.dataTransfer?.files
++      if (!files || files.length === 0) return false
++      event.preventDefault()
++      onDropFiles([...files], view.posAtCoords({ x: event.clientX, y: event.clientY }, false))
++      return true
++    },
++  })
+ }
+ 
+-function createState(doc: string, { onDocChanged, onPaneChange }: StateCallbacks): EditorState {
++function createState(doc: string, { onDocChanged, onPaneChange, onDropFiles }: StateCallbacks): EditorState {
+   const extensions: Extension[] = [
+     history(),
+     drawSelection(),
+@@ -111,6 +140,7 @@ function createState(doc: string, { onDocChanged, onPaneChange }: StateCallbacks
+     placeholder('Start writing Markdown…'),
+     EditorView.contentAttributes.of({ 'aria-label': 'Markdown source', spellcheck: 'false' }),
+     keymap.of(editorKeymap),
++    fileDropHandlers(onDropFiles),
+     editorTheme,
+     EditorView.updateListener.of((update) => {
+       if (update.docChanged) onDocChanged(update.state.doc.toString())
+@@ -126,7 +156,7 @@ function createState(doc: string, { onDocChanged, onPaneChange }: StateCallbacks
+ }
+ 
+ /** The Markdown source editor (CodeMirror 6): undo/redo, search and replace, line wrapping. */
+-export function Editor({ value, documentKey, onChange, hidden = false, column = false, ref }: EditorProps) {
++export function Editor({ value, documentKey, onChange, hidden = false, column = false, onDropFiles, ref }: EditorProps) {
+   const hostRef = useRef<HTMLDivElement>(null)
+   const viewRef = useRef<EditorView | null>(null)
+   // The text this editor last reported, so the echo of its own change is not applied back.
+@@ -144,6 +174,26 @@ export function Editor({ value, documentKey, onChange, hidden = false, column =
+     for (const listener of paneListenersRef.current) listener(change)
+   })
+ 
++  // The text for dropped files comes back asynchronously; it goes in only if
++  // the same document is still open, at the drop position or the end if the
++  // document has since become shorter.
++  const dropFiles = useEffectEvent((files: File[], position: number) => {
++    if (!onDropFiles) return
++    const key = keyRef.current
++    void onDropFiles(files).then((text) => {
++      const view = viewRef.current
++      if (!text || !view || keyRef.current !== key) return
++      const from = Math.min(position, view.state.doc.length)
++      view.dispatch({
++        changes: { from, insert: text },
++        selection: { anchor: from + text.length },
++        userEvent: 'input.drop',
++        scrollIntoView: true,
++      })
++      view.focus()
++    })
++  })
++
+   useEffect(() => {
+     const host = hostRef.current
+     if (!host) return
+@@ -158,6 +208,7 @@ export function Editor({ value, documentKey, onChange, hidden = false, column =
+       state: createState(initialValueRef.current, {
+         onDocChanged: (text) => reportChange(text),
+         onPaneChange: (change) => notifyPane(change),
++        onDropFiles: (files, position) => dropFiles(files, position),
+       }),
+     })
+     viewRef.current = view
+@@ -178,7 +229,11 @@ export function Editor({ value, documentKey, onChange, hidden = false, column =
+       keyRef.current = documentKey
+       reportedRef.current = value
+       view.setState(
+-        createState(value, { onDocChanged: (text) => reportChange(text), onPaneChange: (change) => notifyPane(change) }),
++        createState(value, {
++          onDocChanged: (text) => reportChange(text),
++          onPaneChange: (change) => notifyPane(change),
++          onDropFiles: (files, position) => dropFiles(files, position),
++        }),
+       )
+       // A new document opens at its top; the preview follows the editor there.
+       view.scrollDOM.scrollTop = 0
+diff --git a/src/renderer/src/imageDrop.test.ts b/src/renderer/src/imageDrop.test.ts
+new file mode 100644
+index 0000000..d7988f5
+--- /dev/null
++++ b/src/renderer/src/imageDrop.test.ts
+@@ -0,0 +1,40 @@
++import type { Element, Root } from 'hast'
++import { describe, expect, it } from 'vitest'
++import { encodeImagePath, markdownImage } from './imageDrop'
++import { markdownToSafeTree } from './markdown/pipeline'
++
++function firstImage(tree: Root): Element | undefined {
++  const stack: (Root | Element)[] = [tree]
++  while (stack.length > 0) {
++    const node = stack.pop()
++    if (!node) break
++    if (node.type === 'element' && node.tagName === 'img') return node
++    for (const child of node.children) if (child.type === 'element') stack.push(child)
++  }
++  return undefined
++}
++
++describe('markdownImage', () => {
++  it('uses the file name without its extension as the alt text', () => {
++    expect(markdownImage('photo.png')).toBe('![photo](photo.png)')
++    expect(markdownImage('../img/notes-photo-2.png')).toBe('![notes-photo-2](../img/notes-photo-2.png)')
++    expect(markdownImage('img/.hidden')).toBe('![.hidden](img/.hidden)')
++  })
++
++  it('escapes brackets and backslashes in the alt text', () => {
++    expect(markdownImage('a [draft] \\ b.png')).toBe('![a \\[draft\\] \\\\ b](a%20%5Bdraft%5D%20%5C%20b.png)')
++  })
++
++  it.each([
++    'my photo (1).png',
++    'img/Résumé ä 写真.png',
++    '../up/a#b?c%d.png',
++    'unbalanced (.svg',
++  ])('encodes %s so the preview requests the same file', (relativePath) => {
++    const reference = markdownImage(relativePath)
++    const src = firstImage(markdownToSafeTree(reference))?.properties['src']
++    expect(src).toBe(encodeImagePath(relativePath))
++    // The main process strips ?query and #fragment, then decodes (src/main/images.ts localImageReference).
++    expect(decodeURIComponent(String(src).replace(/[?#].*$/s, ''))).toBe(relativePath)
++  })
++})
+diff --git a/src/renderer/src/imageDrop.ts b/src/renderer/src/imageDrop.ts
+new file mode 100644
+index 0000000..60154f7
+--- /dev/null
++++ b/src/renderer/src/imageDrop.ts
+@@ -0,0 +1,21 @@
++/**
++ * Encodes a relative path for a Markdown link destination. Each segment is
++ * percent-encoded, parentheses too, so spaces, brackets, `#`, `?` and
++ * non-ASCII names survive Markdown parsing; the main process decodes the path
++ * again when the preview loads the image.
++ */
++export function encodeImagePath(relativePath: string): string {
++  return relativePath
++    .split('/')
++    .map((segment) => encodeURIComponent(segment).replace(/[()]/g, (char) => (char === '(' ? '%28' : '%29')))
++    .join('/')
++}
++
++/** The Markdown image reference for a dropped image: its file name without the extension is the alt text. */
++export function markdownImage(relativePath: string): string {
++  const name = relativePath.slice(relativePath.lastIndexOf('/') + 1)
++  const dot = name.lastIndexOf('.')
++  const stem = dot > 0 ? name.slice(0, dot) : name
++  const alt = stem.replace(/[\\[\]]/g, (char) => `\\${char}`)
++  return `![${alt}](${encodeImagePath(relativePath)})`
++}
+diff --git a/src/renderer/src/test/mockApi.ts b/src/renderer/src/test/mockApi.ts
+index dd68627..171a159 100644
+--- a/src/renderer/src/test/mockApi.ts
++++ b/src/renderer/src/test/mockApi.ts
+@@ -49,6 +49,8 @@ export function installMockApi() {
+     closeWindow: vi.fn<ClarityApi['closeWindow']>(),
+     watchDocument: vi.fn<ClarityApi['watchDocument']>().mockResolvedValue(undefined),
+     loadImage: vi.fn<ClarityApi['loadImage']>().mockResolvedValue(null),
++    pathForFile: vi.fn<ClarityApi['pathForFile']>().mockReturnValue(''),
++    importImage: vi.fn<ClarityApi['importImage']>().mockRejectedValue(new Error('No image was expected')),
+     getInitialFile: vi.fn<ClarityApi['getInitialFile']>().mockResolvedValue(null),
+     getInitialFolder: vi.fn<ClarityApi['getInitialFolder']>().mockResolvedValue(null),
+     openExternal: vi.fn<ClarityApi['openExternal']>(),
+diff --git a/src/shared/api.ts b/src/shared/api.ts
+index d2f83b9..d9eca78 100644
+--- a/src/shared/api.ts
++++ b/src/shared/api.ts
+@@ -92,6 +92,14 @@ export interface UiSettings {
+   fontSize: number
+ }
+ 
++/** An image dropped on the editor, ready to be referenced from the document. */
++export interface DroppedImage {
++  /** The image's path relative to the document's folder, with `/` separators and not yet URL-encoded. */
++  relativePath: string
++  /** The file name of the copy made next to the document, or null when the image was already inside the open folder. */
++  copiedAs: string | null
++}
++
+ export const DEFAULT_UI_SETTINGS: UiSettings = {
+   viewMode: 'split',
+   theme: 'dark',
+@@ -145,6 +153,16 @@ export interface ClarityApi {
+    * Only images inside the open folder load; anything else resolves to null.
+    */
+   loadImage(documentPath: string, src: string): Promise<string | null>
++  /** The path on disk of a file dropped from outside the window, or an empty string when it has none. */
++  pathForFile(file: File): string
++  /**
++   * Prepares an image file dropped on the editor for `documentPath`, which must
++   * lie inside the open folder. An image inside the open folder is used where
++   * it is; one from elsewhere is copied next to the document first, under a new
++   * name that never replaces an existing file. Rejects anything that is not an
++   * image file Clarity shows, or is larger than the image size limit.
++   */
++  importImage(documentPath: string, imagePath: string): Promise<DroppedImage>
+   /** The path of the Markdown file requested on launch, if any. */
+   getInitialFile(): Promise<string | null>
+   /** The folder restored on launch, if any. */
+@@ -184,6 +202,7 @@ export const IpcChannel = {
+   CloseWindow: 'clarity:close-window',
+   WatchDocument: 'clarity:watch-document',
+   LoadImage: 'clarity:load-image',
++  ImportImage: 'clarity:import-image',
+   GetInitialFile: 'clarity:get-initial-file',
+   GetInitialFolder: 'clarity:get-initial-folder',
+   OpenExternal: 'clarity:open-external',

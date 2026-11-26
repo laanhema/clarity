@@ -11,6 +11,7 @@ import {
   type UnsavedChoice,
 } from '../shared/api'
 import { listMarkdownTree } from './fileTree'
+import { importImage } from './imageImport'
 import { MAX_IMAGE_BYTES, imageMimeType } from './images'
 import { isMarkdownPath } from './pathGuard'
 import { openExternally } from './security'
@@ -363,6 +364,10 @@ export function registerIpcHandlers(settings: SettingsStore): void {
 
   ipcMain.handle(IpcChannel.LoadImage, (event, documentPath: unknown, src: unknown) =>
     loadImage(senderState(event), documentPath, src),
+  )
+
+  ipcMain.handle(IpcChannel.ImportImage, (event, documentPath: unknown, imagePath: unknown) =>
+    importImage(senderState(event).scope, documentPath, imagePath),
   )
 
   ipcMain.handle(IpcChannel.GetInitialFolder, async (event): Promise<OpenedFolder | null> => {
