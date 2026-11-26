@@ -1,0 +1,69 @@
+diff --git a/src/renderer/src/components/Preview.test.tsx b/src/renderer/src/components/Preview.test.tsx
+new file mode 100644
+index 0000000..3589bd7
+--- /dev/null
++++ b/src/renderer/src/components/Preview.test.tsx
+@@ -0,0 +1,40 @@
++import { render, screen } from '@testing-library/react'
++import { describe, expect, it } from 'vitest'
++import { Preview, type PreviewProps } from './Preview'
++
++function props(markdown: string, documentKey: number, hidden = false): PreviewProps {
++  return { markdown, documentKey, documentPath: null, folderPath: null, hidden, onOpenDocument: () => undefined }
++}
++
++// Showing the previous document until the new one rendered made the preview
++// jump on open: scroll sync first lined up the old text with the new file.
++describe('Preview when another document opens', () => {
++  it('never shows the previous document while the new one renders', async () => {
++    const { rerender } = render(<Preview {...props('# First', 1)} />)
++    expect(await screen.findByRole('heading', { name: 'First' })).toBeInTheDocument()
++
++    rerender(<Preview {...props('# Second', 2)} />)
++    expect(screen.queryByRole('heading', { name: 'First' })).not.toBeInTheDocument()
++    expect(await screen.findByRole('heading', { name: 'Second' })).toBeInTheDocument()
++  })
++
++  it('never shows the previous document when it is shown again after being hidden', async () => {
++    const { rerender } = render(<Preview {...props('# First', 1)} />)
++    expect(await screen.findByRole('heading', { name: 'First' })).toBeInTheDocument()
++
++    // Editor-only view: another document opens while the hidden preview renders nothing.
++    rerender(<Preview {...props('# Second', 2, true)} />)
++    rerender(<Preview {...props('# Second', 2)} />)
++    expect(screen.queryByRole('heading', { name: 'First' })).not.toBeInTheDocument()
++    expect(await screen.findByRole('heading', { name: 'Second' })).toBeInTheDocument()
++  })
++
++  it('keeps showing the document while an edit waits to render', async () => {
++    const { rerender } = render(<Preview {...props('# First', 1)} />)
++    expect(await screen.findByRole('heading', { name: 'First' })).toBeInTheDocument()
++
++    rerender(<Preview {...props('# First edited', 1)} />)
++    expect(screen.getByRole('heading', { name: 'First' })).toBeInTheDocument()
++    expect(await screen.findByRole('heading', { name: 'First edited' })).toBeInTheDocument()
++  })
++})
+diff --git a/src/renderer/src/markdown/useRenderedMarkdown.ts b/src/renderer/src/markdown/useRenderedMarkdown.ts
+index b181f8a..bd26cb3 100644
+--- a/src/renderer/src/markdown/useRenderedMarkdown.ts
++++ b/src/renderer/src/markdown/useRenderedMarkdown.ts
+@@ -13,7 +13,8 @@ interface Rendered {
+ /**
+  * Renders `markdown` to a sanitized, highlighted tree, waiting until typing
+  * has paused for `PREVIEW_DELAY_MS`. A new `documentKey` (another file was
+- * opened) renders right away. While `active` is false nothing is rendered.
++ * opened) renders right away, and until it has, the result is null rather
++ * than the previous document's tree. While `active` is false nothing is rendered.
+  */
+ export function useRenderedMarkdown(markdown: string, documentKey: number, active: boolean): Root | null {
+   const [rendered, setRendered] = useState<Rendered | null>(null)
+@@ -40,5 +41,7 @@ export function useRenderedMarkdown(markdown: string, documentKey: number, activ
+     }
+   }, [markdown, documentKey, active, isNewDocument, upToDate])
+ 
+-  return rendered?.tree ?? null
++  // Never another document's tree: scroll sync would line it up with the new
++  // document in the editor, and the preview would jump when the new one came.
++  return isNewDocument ? null : rendered.tree
+ }
