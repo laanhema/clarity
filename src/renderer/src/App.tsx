@@ -15,6 +15,7 @@ import { Sidebar } from './components/Sidebar'
 import { Splitter } from './components/Splitter'
 import { StatusBar } from './components/StatusBar'
 import { decideExternalChange } from './externalChange'
+import { markdownImage } from './imageDrop'
 import { useScrollSync } from './scrollSync/useScrollSync'
 import { countWords, errorMessage, fileName } from './text'
 import { useTokenEstimate } from './useTokenEstimate'
@@ -273,6 +274,55 @@ export function App() {
     setTimeout(() => editor.current?.openSearch(), 0)
   }
 
+  /**
+   * Turns image files dropped on the editor into Markdown image references,
+   * one per line in drop order. The status bar says why a file was left out,
+   * and which images were copied next to the document. If another document was
+   * opened meanwhile, nothing is inserted, and the status bar names the copies
+   * that no document references.
+   */
+  async function dropImages(files: File[]): Promise<string | null> {
+    setMessage(null)
+    if (!folder) {
+      setMessage('Open a folder to drop images into its documents.')
+      return null
+    }
+    const documentPath = doc.path
+    if (!documentPath) {
+      setMessage('Save the document before dropping images into it.')
+      return null
+    }
+    const key = doc.key
+    const references: string[] = []
+    const copies: string[] = []
+    const problems: string[] = []
+    for (const file of files) {
+      const imagePath = api.pathForFile(file)
+      if (!imagePath) {
+        problems.push(`${file.name} is not a file on disk.`)
+        continue
+      }
+      try {
+        const image = await api.importImage(documentPath, imagePath)
+        references.push(markdownImage(image.relativePath))
+        if (image.copiedAs) copies.push(image.copiedAs)
+      } catch (error) {
+        problems.push(`${errorMessage(error)}.`)
+      }
+    }
+    const closed = latestDoc.current.key !== key
+    const notes = [...problems]
+    if (copies.length > 0) {
+      notes.push(
+        closed
+          ? `${fileName(documentPath)} was closed before the dropped images went in, so no document references the copies left in its folder: ${copies.join(', ')}`
+          : `Copied into the document's folder: ${copies.join(', ')}`,
+      )
+    }
+    if (notes.length > 0) setMessage(notes.join(' '))
+    return closed || references.length === 0 ? null : references.join('\n')
+  }
+
   /** Brings the document in line with a file that another program changed. */
   async function reconcileWithDisk(path: string): Promise<void> {
     if (latestDoc.current.path !== path) return
@@ -425,6 +475,7 @@ export function App() {
           hidden={!showEditor}
           column={viewMode === 'editor'}
           onChange={(content) => setDoc((current) => ({ ...current, content }))}
+          onDropFiles={dropImages}
         />
         {viewMode === 'split' && (
           <Splitter

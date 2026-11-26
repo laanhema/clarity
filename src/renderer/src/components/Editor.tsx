@@ -1,7 +1,7 @@
 import { history, redo, undo } from '@codemirror/commands'
 import { indentOnInput } from '@codemirror/language'
 import { highlightSelectionMatches, openSearchPanel, search } from '@codemirror/search'
-import { EditorState, Transaction, type Extension } from '@codemirror/state'
+import { EditorState, StateEffect, StateField, Transaction, type Extension } from '@codemirror/state'
 import { drawSelection, dropCursor, EditorView, highlightActiveLine, keymap, placeholder } from '@codemirror/view'
 import { useEffect, useEffectEvent, useImperativeHandle, useRef, type Ref } from 'react'
 import { editorLineAt, editorOffsetOf, type PaneChange, type SyncPane } from '../scrollSync/panes'
@@ -31,6 +31,12 @@ export interface EditorProps {
   hidden?: boolean
   /** Lays the text out in the preview's centred column, for editor-only view. */
   column?: boolean
+  /**
+   * Called when files are dropped on the editor, in drop order. Resolves to the
+   * text to insert at the drop position, on lines of its own, or null to insert
+   * nothing. Without it, a file drop inserts nothing.
+   */
+  onDropFiles?: (files: File[]) => Promise<string | null>
   ref?: Ref<EditorHandle>
 }
 
@@ -93,9 +99,64 @@ const editorTheme = EditorView.theme({
 interface StateCallbacks {
   onDocChanged: (value: string) => void
   onPaneChange: (change: PaneChange) => void
+  onDropFiles: (files: File[], position: number) => void
 }
 
-function createState(doc: string, { onDocChanged, onPaneChange }: StateCallbacks): EditorState {
+/** Starts tracking the position of a file drop whose text is still on its way. */
+const trackDrop = StateEffect.define<{ id: number; position: number }>()
+/** Stops tracking a file drop: its text went in, or there is none. */
+const settleDrop = StateEffect.define<number>()
+
+/**
+ * The positions of file drops whose text is still on its way, by drop id. Each
+ * moves with the edits made meanwhile, so typing during a slow copy does not
+ * put the text in the wrong place. A new document starts with none.
+ */
+const pendingDrops = StateField.define<ReadonlyMap<number, number>>({
+  create: () => new Map(),
+  update(drops, transaction) {
+    let next = drops
+    if (transaction.docChanged && drops.size > 0) {
+      next = new Map([...drops].map(([id, position]) => [id, transaction.changes.mapPos(position)]))
+    }
+    for (const effect of transaction.effects) {
+      if (effect.is(trackDrop)) {
+        next = new Map(next).set(effect.value.id, effect.value.position)
+      } else if (effect.is(settleDrop)) {
+        const remaining = new Map(next)
+        remaining.delete(effect.value)
+        next = remaining
+      }
+    }
+    return next
+  },
+})
+
+let nextDropId = 0
+
+/**
+ * Takes file drops away from CodeMirror, which would insert a text file's
+ * contents. Dragged text has no files and stays with CodeMirror.
+ */
+function fileDropHandlers(onDropFiles: StateCallbacks['onDropFiles']): Extension {
+  return EditorView.domEventHandlers({
+    dragover(event) {
+      if (!event.dataTransfer?.types.includes('Files')) return false
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'copy'
+      return false
+    },
+    drop(event, view) {
+      const files = event.dataTransfer?.files
+      if (!files || files.length === 0) return false
+      event.preventDefault()
+      onDropFiles([...files], view.posAtCoords({ x: event.clientX, y: event.clientY }, false))
+      return true
+    },
+  })
+}
+
+function createState(doc: string, { onDocChanged, onPaneChange, onDropFiles }: StateCallbacks): EditorState {
   const extensions: Extension[] = [
     history(),
     drawSelection(),
@@ -111,6 +172,8 @@ function createState(doc: string, { onDocChanged, onPaneChange }: StateCallbacks
     placeholder('Start writing Markdown…'),
     EditorView.contentAttributes.of({ 'aria-label': 'Markdown source', spellcheck: 'false' }),
     keymap.of(editorKeymap),
+    pendingDrops,
+    fileDropHandlers(onDropFiles),
     editorTheme,
     EditorView.updateListener.of((update) => {
       if (update.docChanged) onDocChanged(update.state.doc.toString())
@@ -126,7 +189,7 @@ function createState(doc: string, { onDocChanged, onPaneChange }: StateCallbacks
 }
 
 /** The Markdown source editor (CodeMirror 6): undo/redo, search and replace, line wrapping. */
-export function Editor({ value, documentKey, onChange, hidden = false, column = false, ref }: EditorProps) {
+export function Editor({ value, documentKey, onChange, hidden = false, column = false, onDropFiles, ref }: EditorProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   // The text this editor last reported, so the echo of its own change is not applied back.
@@ -144,6 +207,38 @@ export function Editor({ value, documentKey, onChange, hidden = false, column = 
     for (const listener of paneListenersRef.current) listener(change)
   })
 
+  // The text for dropped files comes back asynchronously; it goes in only if
+  // the same document is still open, at the drop position as moved by the
+  // edits made meanwhile. It gets lines of its own: a line break goes before it
+  // unless the position starts a line, and after it unless the position ends one.
+  const dropFiles = useEffectEvent((files: File[], position: number) => {
+    const view = viewRef.current
+    if (!onDropFiles || !view) return
+    const id = nextDropId++
+    view.dispatch({ effects: trackDrop.of({ id, position }) })
+    void onDropFiles(files).then((text) => {
+      const current = viewRef.current
+      const from = current?.state.field(pendingDrops, false)?.get(id)
+      // A document opened since the drop has no record of it.
+      if (!current || from === undefined) return
+      if (!text) {
+        current.dispatch({ effects: settleDrop.of(id) })
+        return
+      }
+      const line = current.state.doc.lineAt(from)
+      const before = from > line.from ? '\n' : ''
+      const after = from < line.to ? '\n' : ''
+      current.dispatch({
+        changes: { from, insert: `${before}${text}${after}` },
+        selection: { anchor: from + before.length + text.length },
+        effects: settleDrop.of(id),
+        userEvent: 'input.drop',
+        scrollIntoView: true,
+      })
+      current.focus()
+    })
+  })
+
   useEffect(() => {
     const host = hostRef.current
     if (!host) return
@@ -158,6 +253,7 @@ export function Editor({ value, documentKey, onChange, hidden = false, column = 
       state: createState(initialValueRef.current, {
         onDocChanged: (text) => reportChange(text),
         onPaneChange: (change) => notifyPane(change),
+        onDropFiles: (files, position) => dropFiles(files, position),
       }),
     })
     viewRef.current = view
@@ -178,7 +274,11 @@ export function Editor({ value, documentKey, onChange, hidden = false, column = 
       keyRef.current = documentKey
       reportedRef.current = value
       view.setState(
-        createState(value, { onDocChanged: (text) => reportChange(text), onPaneChange: (change) => notifyPane(change) }),
+        createState(value, {
+          onDocChanged: (text) => reportChange(text),
+          onPaneChange: (change) => notifyPane(change),
+          onDropFiles: (files, position) => dropFiles(files, position),
+        }),
       )
       // A new document opens at its top; the preview follows the editor there.
       view.scrollDOM.scrollTop = 0
