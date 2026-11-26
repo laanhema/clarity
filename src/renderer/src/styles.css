@@ -169,6 +169,165 @@
   --inline-code-fg: #c3e88d;
 }
 
+/*
+ * Modus (Protesilaos Stavrou's modus-themes.el 5.3.0): Modus Operandi when the
+ * system is light and Modus Vivendi when it is dark, and Modus Tinted the same
+ * with Operandi Tinted and Vivendi Tinted. The main process leaves the window
+ * following the system for them, so prefers-color-scheme picks the palette.
+ * Each colour is the upstream palette entry the matching Emacs face uses:
+ * bg-main page, bg-dim sidebar and code, bg-inactive hover, bg-hl-line for the
+ * selected row and the active line, accent-0 for folders and the accent,
+ * fg-heading-1 to 6, fg-link, fg-prose-code, docstring for quotes, bg-region,
+ * and bg-search-lazy and bg-search-current for matches. The active line mixes
+ * a colour that comes out as bg-hl-line on bg-main. Its headings, links, list
+ * markers and inline code use the rules at the end of this file.
+ */
+:root[data-theme='modus'] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-sidebar: #f2f2f2;
+  --bg-stripe: var(--bg-sidebar);
+  --bg-hover: #e0e0e0;
+  --bg-active: #dae5ec;
+  --bg-row-hover: var(--bg-hover);
+  --fg: #000000;
+  --fg-muted: #595959;
+  --border: #9f9f9f;
+  --dir: #0031a9;
+  --accent: #0031a9;
+  --unsaved: #884900;
+  --danger: #a60000;
+  --md-heading: var(--fg);
+  --h1: #000000;
+  --h2: #624416;
+  --h3: #193668;
+  --h4: #721045;
+  --h5: #2a5045;
+  --h6: #7f0000;
+  --md-link: #3548cf;
+  --md-code: #005f5f;
+  --md-mark: var(--fg-muted);
+  --md-list: var(--fg-muted);
+  --md-quote: #2a5045;
+  --editor-selection: #bdbdbd;
+  --editor-active-line: color-mix(in srgb, #b5cbd9 50%, transparent);
+  --editor-match: #a4d5f9;
+  --editor-match-selected: #f3d000;
+  --code-bg: var(--bg-sidebar);
+  --inline-code-bg: var(--bg-sidebar);
+  --inline-code-fg: #005f5f;
+}
+
+:root[data-theme='modus-tinted'] {
+  color-scheme: light;
+  --bg: #fbf7f0;
+  --bg-sidebar: #efe9dd;
+  --bg-stripe: var(--bg-sidebar);
+  --bg-hover: #dfd5cf;
+  --bg-active: #f1d5d0;
+  --bg-row-hover: var(--bg-hover);
+  --fg: #000000;
+  --fg-muted: #595959;
+  --border: #9f9690;
+  --dir: #a0132f;
+  --accent: #a0132f;
+  --unsaved: #6d5000;
+  --danger: #a60000;
+  --md-heading: var(--fg);
+  --h1: #000000;
+  --h2: #574316;
+  --h3: #193668;
+  --h4: #721045;
+  --h5: #2a5045;
+  --h6: #7f0000;
+  --md-link: #3546c2;
+  --md-code: #00603f;
+  --md-mark: var(--fg-muted);
+  --md-list: var(--fg-muted);
+  --md-quote: #304463;
+  --editor-selection: #c2bcb5;
+  --editor-active-line: color-mix(in srgb, #e7b3b0 50%, transparent);
+  --editor-match: #a4d5f9;
+  --editor-match-selected: #f3d000;
+  --code-bg: var(--bg-sidebar);
+  --inline-code-bg: var(--bg-sidebar);
+  --inline-code-fg: #00603f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='modus'] {
+    color-scheme: dark;
+    --bg: #000000;
+    --bg-sidebar: #1e1e1e;
+    --bg-stripe: var(--bg-sidebar);
+    --bg-hover: #303030;
+    --bg-active: #2f3849;
+    --bg-row-hover: var(--bg-hover);
+    --fg: #ffffff;
+    --fg-muted: #989898;
+    --border: #646464;
+    --dir: #00bcff;
+    --accent: #00bcff;
+    --unsaved: #fec43f;
+    --danger: #ff5f59;
+    --md-heading: var(--fg);
+    --h1: #ffffff;
+    --h2: #d2b580;
+    --h3: #82b0ec;
+    --h4: #feacd0;
+    --h5: #88ca9f;
+    --h6: #ff9580;
+    --md-link: #79a8ff;
+    --md-code: #6ae4b9;
+    --md-mark: var(--fg-muted);
+    --md-list: var(--fg-muted);
+    --md-quote: #9ac8e0;
+    --editor-selection: #5a5a5a;
+    --editor-active-line: color-mix(in srgb, #5e7092 50%, transparent);
+    --editor-match: #2266ae;
+    --editor-match-selected: #7a6100;
+    --code-bg: var(--bg-sidebar);
+    --inline-code-bg: var(--bg-sidebar);
+    --inline-code-fg: #6ae4b9;
+  }
+
+  :root[data-theme='modus-tinted'] {
+    color-scheme: dark;
+    --bg: #0d0e1c;
+    --bg-sidebar: #1d2235;
+    --bg-stripe: var(--bg-sidebar);
+    --bg-hover: #2b3045;
+    --bg-active: #303a6f;
+    --bg-row-hover: var(--bg-hover);
+    --fg: #ffffff;
+    --fg-muted: #989898;
+    --border: #61647a;
+    --dir: #b6a0ff;
+    --accent: #b6a0ff;
+    --unsaved: #d0bc00;
+    --danger: #ff5f59;
+    --md-heading: var(--fg);
+    --h1: #ffffff;
+    --h2: #d2b580;
+    --h3: #82b0ec;
+    --h4: #feacd0;
+    --h5: #88ca9f;
+    --h6: #ef8386;
+    --md-link: #79a8ff;
+    --md-code: #6ae4b9;
+    --md-mark: var(--fg-muted);
+    --md-list: var(--fg-muted);
+    --md-quote: #9ac8e0;
+    --editor-selection: #555a66;
+    --editor-active-line: color-mix(in srgb, #5366c2 50%, transparent);
+    --editor-match: #2266ae;
+    --editor-match-selected: #7a6100;
+    --code-bg: var(--bg-sidebar);
+    --inline-code-bg: var(--bg-sidebar);
+    --inline-code-fg: #6ae4b9;
+  }
+}
+
 *,
 *::before,
 *::after {
@@ -754,7 +913,8 @@ samp {
 
 /*
  * Shiki colours each token with every theme as CSS variables
- * (--shiki-light, --shiki-dark, --shiki-gruvbox, --shiki-tokyo); the active theme picks one set.
+ * (--shiki-light, --shiki-dark, --shiki-gruvbox, --shiki-tokyo, and --shiki-operandi,
+ * --shiki-vivendi and their -tinted pairs for Modus); the active theme picks one set.
  */
 .markdown-body pre.shiki,
 .markdown-body pre.shiki span {
@@ -803,6 +963,52 @@ samp {
 
 :root[data-theme='tokyo-night-moon'] .markdown-body pre.shiki {
   background-color: var(--shiki-tokyo-bg);
+}
+
+:root[data-theme='modus'] :is(.markdown-body pre.shiki, .markdown-body pre.shiki span) {
+  color: var(--shiki-operandi);
+  font-style: var(--shiki-operandi-font-style);
+  font-weight: var(--shiki-operandi-font-weight);
+  text-decoration: var(--shiki-operandi-text-decoration);
+}
+
+:root[data-theme='modus'] .markdown-body pre.shiki {
+  background-color: var(--shiki-operandi-bg);
+}
+
+:root[data-theme='modus-tinted'] :is(.markdown-body pre.shiki, .markdown-body pre.shiki span) {
+  color: var(--shiki-operandi-tinted);
+  font-style: var(--shiki-operandi-tinted-font-style);
+  font-weight: var(--shiki-operandi-tinted-font-weight);
+  text-decoration: var(--shiki-operandi-tinted-text-decoration);
+}
+
+:root[data-theme='modus-tinted'] .markdown-body pre.shiki {
+  background-color: var(--shiki-operandi-tinted-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='modus'] :is(.markdown-body pre.shiki, .markdown-body pre.shiki span) {
+    color: var(--shiki-vivendi);
+    font-style: var(--shiki-vivendi-font-style);
+    font-weight: var(--shiki-vivendi-font-weight);
+    text-decoration: var(--shiki-vivendi-text-decoration);
+  }
+
+  :root[data-theme='modus'] .markdown-body pre.shiki {
+    background-color: var(--shiki-vivendi-bg);
+  }
+
+  :root[data-theme='modus-tinted'] :is(.markdown-body pre.shiki, .markdown-body pre.shiki span) {
+    color: var(--shiki-vivendi-tinted);
+    font-style: var(--shiki-vivendi-tinted-font-style);
+    font-weight: var(--shiki-vivendi-tinted-font-weight);
+    text-decoration: var(--shiki-vivendi-tinted-text-decoration);
+  }
+
+  :root[data-theme='modus-tinted'] .markdown-body pre.shiki {
+    background-color: var(--shiki-vivendi-tinted-bg);
+  }
 }
 
 /* Status bar */
@@ -1062,44 +1268,90 @@ samp {
 }
 
 /*
- * Preview colours shared by the custom themes (Gruvbox Material Dark Hard and
- * Tokyo Night Moon): headings in the Title colour. Each theme's colours are in
- * its variable block at the top.
+ * Preview colours shared by the custom themes (Gruvbox Material Dark Hard,
+ * Tokyo Night Moon, Modus and Modus Tinted): headings in each level's colour,
+ * links, list markers and inline code. Each theme's colours are in its
+ * variable block at the top.
  */
 
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h1 {
+:is(
+    [data-theme='gruvbox-material-dark-hard'],
+    [data-theme='tokyo-night-moon'],
+    [data-theme='modus'],
+    [data-theme='modus-tinted']
+  ) .markdown-body h1 {
   color: var(--h1);
 }
 
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h2 {
+:is(
+    [data-theme='gruvbox-material-dark-hard'],
+    [data-theme='tokyo-night-moon'],
+    [data-theme='modus'],
+    [data-theme='modus-tinted']
+  ) .markdown-body h2 {
   color: var(--h2);
 }
 
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h3 {
+:is(
+    [data-theme='gruvbox-material-dark-hard'],
+    [data-theme='tokyo-night-moon'],
+    [data-theme='modus'],
+    [data-theme='modus-tinted']
+  ) .markdown-body h3 {
   color: var(--h3);
 }
 
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h4 {
+:is(
+    [data-theme='gruvbox-material-dark-hard'],
+    [data-theme='tokyo-night-moon'],
+    [data-theme='modus'],
+    [data-theme='modus-tinted']
+  ) .markdown-body h4 {
   color: var(--h4);
 }
 
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h5 {
+:is(
+    [data-theme='gruvbox-material-dark-hard'],
+    [data-theme='tokyo-night-moon'],
+    [data-theme='modus'],
+    [data-theme='modus-tinted']
+  ) .markdown-body h5 {
   color: var(--h5);
 }
 
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body h6 {
+:is(
+    [data-theme='gruvbox-material-dark-hard'],
+    [data-theme='tokyo-night-moon'],
+    [data-theme='modus'],
+    [data-theme='modus-tinted']
+  ) .markdown-body h6 {
   color: var(--h6);
 }
 
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body a {
+:is(
+    [data-theme='gruvbox-material-dark-hard'],
+    [data-theme='tokyo-night-moon'],
+    [data-theme='modus'],
+    [data-theme='modus-tinted']
+  ) .markdown-body a {
   color: var(--md-link);
 }
 
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body li::marker {
+:is(
+    [data-theme='gruvbox-material-dark-hard'],
+    [data-theme='tokyo-night-moon'],
+    [data-theme='modus'],
+    [data-theme='modus-tinted']
+  ) .markdown-body li::marker {
   color: var(--md-list);
 }
 
-:is([data-theme='gruvbox-material-dark-hard'], [data-theme='tokyo-night-moon']) .markdown-body :not(pre) > code {
+:is(
+    [data-theme='gruvbox-material-dark-hard'],
+    [data-theme='tokyo-night-moon'],
+    [data-theme='modus'],
+    [data-theme='modus-tinted']
+  ) .markdown-body :not(pre) > code {
   background: var(--inline-code-bg);
   color: var(--inline-code-fg);
 }

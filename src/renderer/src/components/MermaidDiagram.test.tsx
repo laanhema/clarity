@@ -32,6 +32,27 @@ describe('MermaidDiagram', () => {
     delete document.documentElement.dataset['theme']
   })
 
+  it('renders again in the other Modus palette when the system colour scheme changes', async () => {
+    renderMermaidMock.mockReturnValue(new Promise(() => undefined))
+    const listeners: (() => void)[] = []
+    const query = {
+      matches: false,
+      addEventListener: (_type: string, listener: () => void) => listeners.push(listener),
+      removeEventListener: () => undefined,
+    }
+    vi.stubGlobal('matchMedia', () => query)
+    document.documentElement.dataset['theme'] = 'modus'
+    render(<MermaidDiagram source="graph TD; A-->B" />)
+    expect(renderMermaidMock).toHaveBeenLastCalledWith('graph TD; A-->B', 'modus-operandi', 'commit-mono')
+    act(() => {
+      query.matches = true
+      for (const listener of listeners) listener()
+    })
+    await waitFor(() => expect(renderMermaidMock).toHaveBeenLastCalledWith('graph TD; A-->B', 'modus-vivendi', 'commit-mono'))
+    delete document.documentElement.dataset['theme']
+    vi.unstubAllGlobals()
+  })
+
   it('renders again in the new font when the Font setting changes', async () => {
     renderMermaidMock.mockReturnValue(new Promise(() => undefined))
     render(<MermaidDiagram source="graph TD; A-->B" />)

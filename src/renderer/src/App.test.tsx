@@ -444,6 +444,14 @@ describe('view modes and settings', () => {
     expect(document.documentElement).toHaveAttribute('data-theme', 'tokyo-night-moon')
 
     await user.click(screen.getByRole('button', { name: 'Tokyo Night theme' }))
+    expect(mock.api.updateSettings).toHaveBeenCalledWith({ theme: 'modus' })
+    expect(document.documentElement).toHaveAttribute('data-theme', 'modus')
+
+    await user.click(screen.getByRole('button', { name: 'Modus theme' }))
+    expect(mock.api.updateSettings).toHaveBeenCalledWith({ theme: 'modus-tinted' })
+    expect(document.documentElement).toHaveAttribute('data-theme', 'modus-tinted')
+
+    await user.click(screen.getByRole('button', { name: 'Modus Tinted theme' }))
     expect(mock.api.updateSettings).toHaveBeenCalledWith({ theme: 'system' })
     expect(document.documentElement).toHaveAttribute('data-theme', 'system')
   })
@@ -515,9 +523,29 @@ describe('selecting text in the editor', () => {
   // Custom dark themes render inside the OS dark media query, so they must
   // override every Dark variable or inherit GitHub's colours.
   it('gives each custom dark theme its own table stripe', () => {
-    for (const theme of ['gruvbox-material-dark-hard', 'tokyo-night-moon']) {
+    for (const theme of ['gruvbox-material-dark-hard', 'tokyo-night-moon', 'modus', 'modus-tinted']) {
       const block = new RegExp(`:root\\[data-theme='${theme}'\\] \\{([^}]*)\\}`).exec(styles)?.[1] ?? ''
       expect(block, theme).toContain('--bg-stripe: var(--bg-sidebar);')
+    }
+  })
+
+  // In dark mode the Dark :root block applies too, so a variable a Modus
+  // block leaves out keeps its GitHub Dark colour inside Vivendi.
+  it('gives each Modus block every variable the Dark block sets', () => {
+    const darkBlock = /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{[\s\S]*?:root\s*\{([^}]*)\}/.exec(styles)?.[1] ?? ''
+    const names = (block: string) => new Set([...block.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1]))
+    const darkNames = names(darkBlock)
+    expect(darkNames.size).toBeGreaterThan(10)
+    for (const theme of ['modus', 'modus-tinted']) {
+      const blocks = [...styles.matchAll(new RegExp(`:root\\[data-theme='${theme}'\\] \\{([^}]*)\\}`, 'g'))].map(
+        (match) => match[1] ?? '',
+      )
+      expect(blocks, theme).toHaveLength(2)
+      for (const [index, block] of blocks.entries()) {
+        const declared = names(block)
+        const missing = [...darkNames].filter((name) => !declared.has(name))
+        expect(missing, `${theme} ${index === 0 ? 'light' : 'dark'}`).toEqual([])
+      }
     }
   })
 
@@ -539,7 +567,7 @@ describe('selecting text in the editor', () => {
   // would hide a selection made within the line the cursor is on.
   it('keeps the active line translucent in every theme', () => {
     const activeLineColours = [...styles.matchAll(/--editor-active-line:\s*([^;]+);/g)].map((match) => match[1] ?? '')
-    expect(activeLineColours).toHaveLength(4)
+    expect(activeLineColours).toHaveLength(8)
     for (const colour of activeLineColours) {
       const alpha = /^rgba\([^)]*,\s*([\d.]+)\)$/.exec(colour)?.[1]
       const mixed = /^color-mix\(in srgb, #[\da-f]{6} (\d+)%, transparent\)$/.exec(colour)?.[1]
@@ -826,7 +854,7 @@ describe('font and font size', () => {
   })
 
   it('keeps the same font in every theme', () => {
-    for (const theme of ['light', 'dark', 'gruvbox-material-dark-hard', 'tokyo-night-moon'] as const) {
+    for (const theme of ['light', 'dark', 'gruvbox-material-dark-hard', 'tokyo-night-moon', 'modus', 'modus-tinted'] as const) {
       mock.changeSettings({ ...DEFAULT_UI_SETTINGS, theme, font: 'jetbrains-mono-nl' })
       expectWholeAppIn('JetBrains Mono NL')
     }

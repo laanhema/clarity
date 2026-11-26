@@ -55,13 +55,22 @@ export type ReloadChoice = 'reload' | 'keep'
 export type ViewMode = 'editor' | 'split' | 'preview'
 export const VIEW_MODES = ['editor', 'split', 'preview'] as const satisfies readonly ViewMode[]
 
-export type ThemeSetting = 'system' | 'light' | 'dark' | 'gruvbox-material-dark-hard' | 'tokyo-night-moon'
+export type ThemeSetting =
+  | 'system'
+  | 'light'
+  | 'dark'
+  | 'gruvbox-material-dark-hard'
+  | 'tokyo-night-moon'
+  | 'modus'
+  | 'modus-tinted'
 export const THEME_SETTINGS = [
   'system',
   'light',
   'dark',
   'gruvbox-material-dark-hard',
   'tokyo-night-moon',
+  'modus',
+  'modus-tinted',
 ] as const satisfies readonly ThemeSetting[]
 
 /**
