@@ -67,7 +67,7 @@ unified with remark and rehype was chosen over a single-string renderer such as 
 
 ### Styling and themes
 
-Styles are plain CSS with custom properties per theme (Light, Dark, Gruvbox Material Dark Hard, Tokyo Night Moon, or follow the system). The editor and Mermaid diagrams use constructed stylesheets inside shadow roots, which keeps the CSP free of `unsafe-inline` in production. Fonts are bundled because `font-src 'self'` allows nothing else, and the Vite config keeps them out of `data:` URLs for the same reason.
+Styles are plain CSS with custom properties per theme (Light, Dark, Gruvbox Material Dark Hard, Tokyo Night Moon, Modus, Modus Tinted, or follow the system). The editor and Mermaid diagrams use constructed stylesheets inside shadow roots, which keeps the CSP free of `unsafe-inline` in production. Fonts are bundled because `font-src 'self'` allows nothing else, and the Vite config keeps them out of `data:` URLs for the same reason.
 
 ### State and settings
 

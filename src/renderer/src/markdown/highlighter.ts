@@ -3,6 +3,7 @@ import type { Element, Root } from 'hast'
 import { createHighlighterCore, type HighlighterCore } from 'shiki/core'
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
 import { gruvboxMaterialDarkHard } from './gruvboxMaterialTheme'
+import { modusOperandi, modusOperandiTinted, modusVivendi, modusVivendiTinted } from './modusThemes'
 import { tokyoNightMoon } from './tokyoNightMoonTheme'
 
 type LanguageModule = Promise<{ default: LanguageRegistration[] }>
@@ -83,13 +84,18 @@ export function grammarFor(language: string): string | null {
 
 /**
  * Every theme's code colours, by the key styles.css reads them with
- * (`--shiki-light`, `--shiki-dark`, `--shiki-gruvbox`, `--shiki-tokyo`).
+ * (`--shiki-light`, `--shiki-dark`, `--shiki-gruvbox`, `--shiki-tokyo`,
+ * `--shiki-operandi`, `--shiki-vivendi`, `--shiki-operandi-tinted`, `--shiki-vivendi-tinted`).
  */
 export const THEMES = {
   light: 'github-light',
   dark: 'github-dark-default',
   gruvbox: gruvboxMaterialDarkHard.name,
   tokyo: tokyoNightMoon.name,
+  operandi: modusOperandi.name,
+  vivendi: modusVivendi.name,
+  'operandi-tinted': modusOperandiTinted.name,
+  'vivendi-tinted': modusVivendiTinted.name,
 } as const
 
 let highlighterPromise: Promise<HighlighterCore> | null = null
@@ -102,6 +108,10 @@ function getHighlighter(): Promise<HighlighterCore> {
       import('@shikijs/themes/github-dark-default'),
       gruvboxMaterialDarkHard,
       tokyoNightMoon,
+      modusOperandi,
+      modusVivendi,
+      modusOperandiTinted,
+      modusVivendiTinted,
     ],
     langs: [],
     // The JavaScript engine needs no WebAssembly, which the app's CSP does not allow.

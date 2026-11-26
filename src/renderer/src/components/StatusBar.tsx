@@ -19,6 +19,8 @@ const THEME_LABELS: Record<ThemeSetting, string> = {
   dark: 'Dark theme',
   'gruvbox-material-dark-hard': 'Gruvbox theme',
   'tokyo-night-moon': 'Tokyo Night theme',
+  modus: 'Modus theme',
+  'modus-tinted': 'Modus Tinted theme',
 }
 
 const percent = (fraction: number): string => `±${Math.round(fraction * 100)}%`
@@ -63,7 +65,7 @@ export function StatusBar({ path, dirty, wordCount, tokenCount, message, theme, 
           <span>Anthropic has not published the tokenizer, so only its API counts exactly.</span>
         </span>
       </span>
-      <button type="button" className="status-theme" title="Switch theme (System → Light → Dark → Gruvbox → Tokyo Night)" onClick={onCycleTheme}>
+      <button type="button" className="status-theme" title="Switch theme (System → Light → Dark → Gruvbox → Tokyo Night → Modus → Modus Tinted)" onClick={onCycleTheme}>
         {THEME_LABELS[theme]}
       </button>
     </footer>
