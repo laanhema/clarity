@@ -55,7 +55,9 @@ const NEXT_THEME: Record<ThemeSetting, ThemeSetting> = {
   light: 'dark',
   dark: 'gruvbox-material-dark-hard',
   'gruvbox-material-dark-hard': 'tokyo-night-moon',
-  'tokyo-night-moon': 'system',
+  'tokyo-night-moon': 'modus',
+  modus: 'modus-tinted',
+  'modus-tinted': 'system',
 }
 
 export function App() {

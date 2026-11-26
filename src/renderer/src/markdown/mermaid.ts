@@ -1,8 +1,19 @@
 import type { Mermaid, MermaidConfig } from 'mermaid'
 import { FONT_SETTINGS, THEME_SETTINGS, type FontSetting, type ThemeSetting } from '../../../shared/api'
 
-/** The diagram palette in use: one per app theme, with "system" resolved to light or dark. */
-export type DiagramStyle = 'light' | 'dark' | 'gruvbox-material-dark-hard' | 'tokyo-night-moon'
+/**
+ * The diagram palette in use: one per app theme, with each theme that follows
+ * the system ("system", Modus, Modus Tinted) resolved to its light or dark palette.
+ */
+export type DiagramStyle =
+  | 'light'
+  | 'dark'
+  | 'gruvbox-material-dark-hard'
+  | 'tokyo-night-moon'
+  | 'modus-operandi'
+  | 'modus-vivendi'
+  | 'modus-operandi-tinted'
+  | 'modus-vivendi-tinted'
 
 /** Reads the app theme from the `data-theme` value App puts on the root element; anything else counts as "system". */
 export function parseThemeSetting(value: string | undefined): ThemeSetting {
@@ -14,9 +25,18 @@ export function parseFontSetting(value: string | undefined): FontSetting {
   return FONT_SETTINGS.find((font) => font === value) ?? 'commit-mono'
 }
 
-/** The diagram palette for an app theme. "System" follows the system colour scheme. */
+/** The diagram palette for an app theme. "System", Modus and Modus Tinted follow the system colour scheme. */
 export function diagramStyle(theme: ThemeSetting, systemDark: boolean): DiagramStyle {
-  return theme === 'system' ? (systemDark ? 'dark' : 'light') : theme
+  switch (theme) {
+    case 'system':
+      return systemDark ? 'dark' : 'light'
+    case 'modus':
+      return systemDark ? 'modus-vivendi' : 'modus-operandi'
+    case 'modus-tinted':
+      return systemDark ? 'modus-vivendi-tinted' : 'modus-operandi-tinted'
+    default:
+      return theme
+  }
 }
 
 /** The font stack of each Font setting, as `--font-app` in styles.css has it. */
@@ -170,6 +190,148 @@ export const PALETTES: Record<DiagramStyle, Palette> = {
     loopTextColor: '#c8d3f5',
     activationBkgColor: '#2d3f76',
     activationBorderColor: '#82aaff',
+  },
+  /*
+   * The Modus palettes (modus-themes.el): bg-main page, nodes in the nuanced
+   * background of the accent-0 hue with an accent-0 border, bg-inactive and
+   * bg-dim fills with the border colour, fg-dim lines, fg-alt titles, and
+   * notes in bg-yellow-nuanced with the warning colour.
+   */
+  'modus-operandi': {
+    darkMode: false,
+    background: '#ffffff',
+    primaryColor: '#ecedff',
+    primaryBorderColor: '#0031a9',
+    primaryTextColor: '#000000',
+    secondaryColor: '#e0e0e0',
+    secondaryBorderColor: '#9f9f9f',
+    secondaryTextColor: '#000000',
+    tertiaryColor: '#f2f2f2',
+    tertiaryBorderColor: '#9f9f9f',
+    tertiaryTextColor: '#000000',
+    lineColor: '#595959',
+    textColor: '#000000',
+    titleColor: '#193668',
+    clusterBkg: '#f2f2f2',
+    clusterBorder: '#9f9f9f',
+    edgeLabelBackground: '#ffffff',
+    noteBkgColor: '#f8f0d0',
+    noteBorderColor: '#884900',
+    noteTextColor: '#000000',
+    actorBkg: '#ecedff',
+    actorBorder: '#0031a9',
+    actorTextColor: '#000000',
+    actorLineColor: '#9f9f9f',
+    signalColor: '#000000',
+    signalTextColor: '#000000',
+    labelBoxBkgColor: '#ecedff',
+    labelBoxBorderColor: '#0031a9',
+    labelTextColor: '#000000',
+    loopTextColor: '#000000',
+    activationBkgColor: '#f2f2f2',
+    activationBorderColor: '#0031a9',
+  },
+  'modus-vivendi': {
+    darkMode: true,
+    background: '#000000',
+    primaryColor: '#12154a',
+    primaryBorderColor: '#00bcff',
+    primaryTextColor: '#ffffff',
+    secondaryColor: '#303030',
+    secondaryBorderColor: '#646464',
+    secondaryTextColor: '#ffffff',
+    tertiaryColor: '#1e1e1e',
+    tertiaryBorderColor: '#646464',
+    tertiaryTextColor: '#ffffff',
+    lineColor: '#989898',
+    textColor: '#ffffff',
+    titleColor: '#c6daff',
+    clusterBkg: '#1e1e1e',
+    clusterBorder: '#646464',
+    edgeLabelBackground: '#000000',
+    noteBkgColor: '#381d0f',
+    noteBorderColor: '#fec43f',
+    noteTextColor: '#ffffff',
+    actorBkg: '#12154a',
+    actorBorder: '#00bcff',
+    actorTextColor: '#ffffff',
+    actorLineColor: '#646464',
+    signalColor: '#ffffff',
+    signalTextColor: '#ffffff',
+    labelBoxBkgColor: '#12154a',
+    labelBoxBorderColor: '#00bcff',
+    labelTextColor: '#ffffff',
+    loopTextColor: '#ffffff',
+    activationBkgColor: '#1e1e1e',
+    activationBorderColor: '#00bcff',
+  },
+  'modus-operandi-tinted': {
+    darkMode: false,
+    background: '#fbf7f0',
+    primaryColor: '#ffe8e8',
+    primaryBorderColor: '#a0132f',
+    primaryTextColor: '#000000',
+    secondaryColor: '#dfd5cf',
+    secondaryBorderColor: '#9f9690',
+    secondaryTextColor: '#000000',
+    tertiaryColor: '#efe9dd',
+    tertiaryBorderColor: '#9f9690',
+    tertiaryTextColor: '#000000',
+    lineColor: '#595959',
+    textColor: '#000000',
+    titleColor: '#193668',
+    clusterBkg: '#efe9dd',
+    clusterBorder: '#9f9690',
+    edgeLabelBackground: '#fbf7f0',
+    noteBkgColor: '#f8f0d0',
+    noteBorderColor: '#6d5000',
+    noteTextColor: '#000000',
+    actorBkg: '#ffe8e8',
+    actorBorder: '#a0132f',
+    actorTextColor: '#000000',
+    actorLineColor: '#9f9690',
+    signalColor: '#000000',
+    signalTextColor: '#000000',
+    labelBoxBkgColor: '#ffe8e8',
+    labelBoxBorderColor: '#a0132f',
+    labelTextColor: '#000000',
+    loopTextColor: '#000000',
+    activationBkgColor: '#efe9dd',
+    activationBorderColor: '#a0132f',
+  },
+  'modus-vivendi-tinted': {
+    darkMode: true,
+    background: '#0d0e1c',
+    primaryColor: '#2f0c3f',
+    primaryBorderColor: '#b6a0ff',
+    primaryTextColor: '#ffffff',
+    secondaryColor: '#2b3045',
+    secondaryBorderColor: '#61647a',
+    secondaryTextColor: '#ffffff',
+    tertiaryColor: '#1d2235',
+    tertiaryBorderColor: '#61647a',
+    tertiaryTextColor: '#ffffff',
+    lineColor: '#989898',
+    textColor: '#ffffff',
+    titleColor: '#c6daff',
+    clusterBkg: '#1d2235',
+    clusterBorder: '#61647a',
+    edgeLabelBackground: '#0d0e1c',
+    noteBkgColor: '#381d0f',
+    noteBorderColor: '#d0bc00',
+    noteTextColor: '#ffffff',
+    actorBkg: '#2f0c3f',
+    actorBorder: '#b6a0ff',
+    actorTextColor: '#ffffff',
+    actorLineColor: '#61647a',
+    signalColor: '#ffffff',
+    signalTextColor: '#ffffff',
+    labelBoxBkgColor: '#2f0c3f',
+    labelBoxBorderColor: '#b6a0ff',
+    labelTextColor: '#ffffff',
+    loopTextColor: '#ffffff',
+    activationBkgColor: '#1d2235',
+    activationBorderColor: '#b6a0ff',
   },
 }
 

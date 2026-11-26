@@ -17,8 +17,8 @@ vi.mock('electron', () => {
   return { BrowserWindow, Menu: { buildFromTemplate: (template: unknown) => template } }
 })
 
-function template(isMac: boolean): MenuItemConstructorOptions[] {
-  const options: MenuOptions = {
+function menuOptions(isMac: boolean): MenuOptions {
+  return {
     isMac,
     isDev: false,
     ui: DEFAULT_UI_SETTINGS,
@@ -30,7 +30,14 @@ function template(isMac: boolean): MenuItemConstructorOptions[] {
     openRecent: vi.fn(),
     clearRecent: vi.fn(),
   }
+}
+
+function build(options: MenuOptions): MenuItemConstructorOptions[] {
   return buildMenu(options) as unknown as MenuItemConstructorOptions[]
+}
+
+function template(isMac: boolean): MenuItemConstructorOptions[] {
+  return build(menuOptions(isMac))
 }
 
 function flatten(items: MenuItemConstructorOptions[]): MenuItemConstructorOptions[] {
@@ -84,5 +91,17 @@ describe('menu shortcuts', () => {
     send.mockClear()
     item?.click?.({} as never, undefined, {})
     expect(send).toHaveBeenCalledWith(IpcChannel.MenuCommand, 'show-shortcuts')
+  })
+})
+
+describe('theme menu', () => {
+  it('lists Modus and Modus Tinted under View → Theme and selects them', () => {
+    const setTheme = vi.fn()
+    const options = { ...menuOptions(false), setTheme }
+    const theme = flatten(build(options)).find((item) => item.label === 'Theme')
+    const items = Array.isArray(theme?.submenu) ? theme.submenu : []
+    expect(items.map((item) => item.label).slice(-3)).toEqual(['Tokyo Night Moon', 'Modus', 'Modus Tinted'])
+    items.find((item) => item.label === 'Modus Tinted')?.click?.({} as never, undefined, {})
+    expect(setTheme).toHaveBeenCalledWith('modus-tinted')
   })
 })

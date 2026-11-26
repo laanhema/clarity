@@ -45,6 +45,8 @@ const THEME_ITEMS: { theme: ThemeSetting; label: string }[] = [
   { theme: 'dark', label: 'Dark' },
   { theme: 'gruvbox-material-dark-hard', label: 'Gruvbox Material Dark Hard' },
   { theme: 'tokyo-night-moon', label: 'Tokyo Night Moon' },
+  { theme: 'modus', label: 'Modus' },
+  { theme: 'modus-tinted', label: 'Modus Tinted' },
 ]
 
 const FONT_ITEMS: { font: FontSetting; label: string }[] = [

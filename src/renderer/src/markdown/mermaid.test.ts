@@ -72,7 +72,7 @@ describe('applyInlineStyles', () => {
 })
 
 describe('diagramStyle', () => {
-  it('gives each app theme its own palette, and "system" the light or dark one', () => {
+  it('gives each app theme its own palette, and "system", Modus and Modus Tinted the light or dark one', () => {
     const styles = (systemDark: boolean) => THEME_SETTINGS.map((theme) => [theme, diagramStyle(theme, systemDark)])
     expect(styles(false)).toEqual([
       ['system', 'light'],
@@ -80,8 +80,12 @@ describe('diagramStyle', () => {
       ['dark', 'dark'],
       ['gruvbox-material-dark-hard', 'gruvbox-material-dark-hard'],
       ['tokyo-night-moon', 'tokyo-night-moon'],
+      ['modus', 'modus-operandi'],
+      ['modus-tinted', 'modus-operandi-tinted'],
     ])
     expect(diagramStyle('system', true)).toBe('dark')
+    expect(diagramStyle('modus', true)).toBe('modus-vivendi')
+    expect(diagramStyle('modus-tinted', true)).toBe('modus-vivendi-tinted')
   })
 
   it('reads the root element\'s theme, falling back to "system"', () => {
@@ -99,14 +103,18 @@ describe('diagramStyle', () => {
 
 describe('mermaidConfig', () => {
   it("maps each app theme to its palette, in that theme's page colour and accent", () => {
-    const palette = (theme: (typeof THEME_SETTINGS)[number]) => {
-      const variables = mermaidConfig(diagramStyle(theme, false), 'commit-mono').themeVariables as Record<string, unknown>
+    const palette = (theme: (typeof THEME_SETTINGS)[number], systemDark = false) => {
+      const variables = mermaidConfig(diagramStyle(theme, systemDark), 'commit-mono').themeVariables as Record<string, unknown>
       return [variables['background'], variables['primaryBorderColor'], variables['darkMode']]
     }
     expect(palette('light')).toEqual(['#ffffff', '#2e6be6', false])
     expect(palette('dark')).toEqual(['#0d1117', '#4493f8', true])
     expect(palette('gruvbox-material-dark-hard')).toEqual(['#1d2021', '#e78a4e', true])
     expect(palette('tokyo-night-moon')).toEqual(['#222436', '#82aaff', true])
+    expect(palette('modus')).toEqual(['#ffffff', '#0031a9', false])
+    expect(palette('modus', true)).toEqual(['#000000', '#00bcff', true])
+    expect(palette('modus-tinted')).toEqual(['#fbf7f0', '#a0132f', false])
+    expect(palette('modus-tinted', true)).toEqual(['#0d0e1c', '#b6a0ff', true])
   })
 
   it('uses the base theme, classic look, ELK layout and app font, with no corner CSS', () => {

@@ -135,9 +135,11 @@ describe('code highlighting', () => {
 
   it('colours code blocks with the variables of every theme', async () => {
     const out = toHtml(await renderMarkdown('```ts\nconst answer: number = 42\n```'))
-    expect(out).toContain('class="shiki shiki-themes github-light github-dark-default gruvbox-material-dark-hard tokyo-night-moon"')
+    expect(out).toContain(
+      'class="shiki shiki-themes github-light github-dark-default gruvbox-material-dark-hard tokyo-night-moon modus-operandi modus-vivendi modus-operandi-tinted modus-vivendi-tinted"',
+    )
     expect(out).toMatch(
-      /style="[^"]*--shiki-light:#[0-9a-f]+;--shiki-dark:#[0-9a-f]+;--shiki-gruvbox:#[0-9a-f]+;--shiki-tokyo:#[0-9a-f]+/i,
+      /style="[^"]*--shiki-light:#[0-9a-f]+;--shiki-dark:#[0-9a-f]+;--shiki-gruvbox:#[0-9a-f]+;--shiki-tokyo:#[0-9a-f]+;--shiki-operandi:#[0-9a-f]+;--shiki-vivendi:#[0-9a-f]+;--shiki-operandi-tinted:#[0-9a-f]+;--shiki-vivendi-tinted:#[0-9a-f]+/i,
     )
     expect(out).toContain('answer')
   })
@@ -170,6 +172,34 @@ describe('code highlighting', () => {
     expect(tokyo('\\+')?.toLowerCase()).toBe('#89ddff')
     expect(out).toMatch(/--shiki-tokyo-bg:#1e2030/i)
     expect(out).toMatch(/--shiki-tokyo:#636da6;[^"]*--shiki-tokyo-font-style:italic[^>]*>\/\/ note</i)
+  })
+
+  it('colours code with the Modus palettes, plain and tinted, in light and dark', async () => {
+    const out = toHtml(
+      await renderMarkdown('```ts\n// note\nimport { x } from "y"\nfunction add(a: number): Point {\n  return a + 42\n}\n```'),
+    )
+    // The ':' right after the key keeps 'operandi' from matching 'operandi-tinted'.
+    const modus = (key: string, token: string) =>
+      new RegExp(`--shiki-${key}:(#[0-9a-f]+)[^>]*>\\s*${token}<`, 'i').exec(out)?.[1]?.toLowerCase()
+    const expected: Record<string, Record<string, string>> = {
+      import: { operandi: '#531ab6', vivendi: '#b6a0ff', 'operandi-tinted': '#0031a9', 'vivendi-tinted': '#79a8ff' },
+      '"y"': { operandi: '#3548cf', vivendi: '#79a8ff', 'operandi-tinted': '#00598b', 'vivendi-tinted': '#2fafff' },
+      add: { operandi: '#721045', vivendi: '#feacd0', 'operandi-tinted': '#602938', 'vivendi-tinted': '#f78fe7' },
+      a: { operandi: '#005e8b', vivendi: '#00d3d0', 'operandi-tinted': '#00603f', 'vivendi-tinted': '#4ae2f0' },
+      number: { operandi: '#005f5f', vivendi: '#6ae4b9', 'operandi-tinted': '#306010', 'vivendi-tinted': '#11c777' },
+      Point: { operandi: '#005f5f', vivendi: '#6ae4b9', 'operandi-tinted': '#306010', 'vivendi-tinted': '#11c777' },
+      '42': { operandi: '#000000', vivendi: '#ffffff', 'operandi-tinted': '#000000', 'vivendi-tinted': '#ffffff' },
+      '// note': { operandi: '#595959', vivendi: '#989898', 'operandi-tinted': '#7f0000', 'vivendi-tinted': '#ef8386' },
+    }
+    for (const [token, colours] of Object.entries(expected)) {
+      for (const [key, colour] of Object.entries(colours)) expect(modus(key, token), `${key} ${token}`).toBe(colour)
+    }
+    expect(out).toMatch(/--shiki-operandi-bg:#f2f2f2/i)
+    expect(out).toMatch(/--shiki-vivendi-bg:#1e1e1e/i)
+    expect(out).toMatch(/--shiki-operandi-tinted-bg:#efe9dd/i)
+    expect(out).toMatch(/--shiki-vivendi-tinted-bg:#1d2235/i)
+    // Upstream turns italic comments off by default.
+    expect(out).not.toMatch(/--shiki-(operandi|vivendi)[a-z-]*-font-style:italic/i)
   })
 
   it('leaves blocks without a known language alone', async () => {
